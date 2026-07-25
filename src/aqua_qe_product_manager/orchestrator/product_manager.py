@@ -3,6 +3,7 @@ from ..models import (
     MarketAnalysis,
     PRDDraft,
     Persona,
+    PrioritizedRequirement,
     ProblemStatement,
     ProductStrategy,
     ProductVision,
@@ -13,6 +14,7 @@ from ..workflow.generate_prd import finalize_prd, generate_prd_draft
 from ..workflow.generate_problem_discovery import generate_problem_discovery
 from ..workflow.generate_product_strategy import generate_strategy_draft
 from ..workflow.generate_product_vision import generate_vision_draft
+from ..workflow.prioritize_requirements import classify_moscow_draft
 
 
 def handle_discovery(
@@ -41,3 +43,10 @@ def handle_existing_prd(caminho: str) -> PRDDraft:
     """Carrega um PRD existente (Markdown, conforme docs/standards/prd_standard.md) como PRDDraft, preservando a redação original campo a campo, e aplica o mesmo ciclo de validação/revisão do PRD gerado."""
     draft = parse_prd_markdown(read_text_file(caminho))
     return finalize_prd(draft)
+
+
+def handle_moscow_classification(
+    requisitos: list[str], texto_fonte: str
+) -> list[PrioritizedRequirement]:
+    """Classifica os requisitos funcionais do PRD aceito em MoSCoW, a partir de sinais de linguagem no próprio texto do PRD — nunca inventados."""
+    return classify_moscow_draft(requisitos, texto_fonte)

@@ -18,4 +18,5 @@ Em cada interação, maximizar a qualidade estratégica (rastreável à fonte, s
 
 - Não é objetivo do agente realizar pesquisa de mercado ou "saber" sobre concorrentes reais além do que foi informado — isso violaria GR-M1.
 - Não é objetivo do agente decidir a estratégia de produto por conta própria ou aprovar a visão/estratégia/PRD em nome do Product Manager humano (ver `agent_design.md`).
-- Não é objetivo do agente, nesta fase, realizar priorização formal (RICE/MoSCoW/Kano/WSJF), definição de MVP scope ou business case — deliberadamente adiado (ver `prd.md`, seção "Fora de escopo").
+- Não é objetivo do agente realizar priorização Kano — depende estruturalmente de dados de pesquisa de satisfação de cliente ausentes do tipo de entrada deste agente, permanentemente fora de escopo (ver `prd.md`, seção "Fora de escopo"). MoSCoW/RICE/WSJF são implementados (`--priorizar`).
+- Não é objetivo do agente, nesta fase, definir MVP scope formal ou business case — deliberadamente adiado (ver `prd.md`, seção "Fora de escopo").

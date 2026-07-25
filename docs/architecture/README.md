@@ -21,6 +21,8 @@ Caso especial só para PRD (`--prd-existente`): a etapa `Generate` é substituí
 
 Depois de `Approve`, o artefato aceito (PRD, Visão ou Estratégia — não só o PRD) pode opcionalmente ser publicado como página nova (`create_confluence_page`, `--publicar-confluence`) ou usado para atualizar uma página já existente (`update_confluence_page`, `--atualizar-confluence`, mutuamente exclusivo) no Confluence, sob uma segunda confirmação humana explícita, distinta do aceite — também sem diagrama próprio.
 
+Só para PRD, depois de `Approve`, os requisitos funcionais também podem ser priorizados (`--priorizar moscow/rice/wsjf`) — `classify_moscow` (categórico, a partir do texto) ou `compute_rice_score`/`compute_wsjf_score` (números sempre coletados interativamente do usuário, GR-M4). Exportado sempre num arquivo separado do PRD; sem diagrama próprio.
+
 ## 3 — Fluxo de descoberta
 
 ![Fluxo de descoberta](svg/03-fluxo-descoberta.svg)

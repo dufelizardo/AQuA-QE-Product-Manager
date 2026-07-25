@@ -8,6 +8,7 @@
 2. **Prosseguir vs. interromper por ambiguidade** — após cada skill geradora, o agente avalia se há informação suficiente para um artefato rastreável. Se não houver, **interrompe e solicita esclarecimento** (não gera suposição silenciosa) — mesma decisão de design mais importante herdada do AQuA-QE Product Owner (ver `guardrails.md`).
 3. **Nunca inventar dado de mercado/financeiro mesmo quando o modelo "sabe"** — esta é a decisão de design mais específica deste agente (não existe equivalente direto no Product Owner): mesmo que o LLM tenha conhecimento real sobre concorrentes de um mercado, esse conhecimento nunca é usado para preencher `MarketAnalysis`/`BusinessCase` — só o que o usuário informou.
 4. **Aprovar automaticamente vs. exigir revisão humana** — o agente **nunca** decide aprovação final de nenhum artefato. `validate_*` decide apenas se passa no checklist automático (nível "rascunho validado"); a aprovação de negócio permanece sempre humana, sempre perguntada explicitamente no CLI.
+5. **Priorização categórica automática vs. numérica sempre interativa** — MoSCoW é categórico (classificação com base em sinal de linguagem), então o LLM pode classificar seguindo GR-1 normalmente. RICE/WSJF são numéricos (fórmulas de reach/impact/effort/business value etc.) — pedir ao LLM para "estimar" esses números seria inventar dado de esforço/negócio, então o agente nunca tenta: sempre pergunta os números ao usuário e calcula o score em Python puro (GR-M4). A mesma capacidade (priorização) tem dois desenhos de interação bem diferentes, deliberadamente, por causa do risco de invenção em cada um.
 
 ## Papel de cada camada nas decisões
 
@@ -25,4 +26,4 @@ Os dois agentes são **independentes** — repositórios separados, sem runtime 
 
 ## Fora do escopo do agente
 
-Pesquisa de mercado real, entrevistas com clientes, priorização formal, definição de MVP scope, business case, comunicação entre times e gestão de stakeholders — ver `prd.md`, seção "Fora de escopo", para a lista completa e o que está deliberadamente adiado vs. permanentemente fora do escopo deste agente.
+Pesquisa de mercado real, entrevistas com clientes, priorização Kano, definição de MVP scope, business case, comunicação entre times e gestão de stakeholders — ver `prd.md`, seção "Fora de escopo", para a lista completa e o que está deliberadamente adiado vs. permanentemente fora do escopo deste agente.

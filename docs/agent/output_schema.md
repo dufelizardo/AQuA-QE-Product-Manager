@@ -91,6 +91,32 @@ Gerado por `generate_prd`, opcionalmente incorporando descoberta/visão/estraté
 }
 ```
 
+## Schema de priorização
+
+Gerado por `classify_moscow` (MoSCoW) ou pelo cálculo interativo de RICE/WSJF (`compute_rice_score`/`compute_wsjf_score`), sempre a partir dos `functional_requirements` de um PRD já aceito. **Deliberadamente fora de `PRDDraft`** — nunca mesclado no `prd.md` exportado, sempre um arquivo separado (`--saida-priorizacao`), para preservar o contrato de handoff byte-idêntico ao `PRDDraft` do Product Owner:
+
+```
+{
+  "requirement": "<string, um dos functional_requirements do PRD aceito>",
+  "moscow": "must | should | could | wont | <string vazia, se não houver sinal no texto>",
+  "moscow_justification": "<string, trecho do texto que sustenta a categoria, vazio se moscow for vazio>",
+  "metodo_numerico": "rice | wsjf | <string vazia, quando o método for moscow>",
+  "score": "<float, apenas para rice/wsjf; null para moscow>",
+  "inputs": {
+    "reach": "<float, apenas rice, sempre informado pelo usuário>",
+    "impact": "<float, apenas rice>",
+    "confidence": "<float, apenas rice>",
+    "effort": "<float, apenas rice>",
+    "business_value": "<float, apenas wsjf>",
+    "time_criticality": "<float, apenas wsjf>",
+    "risk_reduction": "<float, apenas wsjf>",
+    "job_size": "<float, apenas wsjf>"
+  }
+}
+```
+
+Os oito campos de `inputs` nunca são preenchidos pelo agente — são coletados via `input()` no CLI (GR-M4). Para MoSCoW, `inputs` fica com todos os valores `null`.
+
 ## Valores válidos de `status`
 
 - **`draft_validated`** — passou no checklist automático e na revisão por um segundo LLM; ainda não tem aceitação humana (ver RULE-005 em `rules.md`).
@@ -99,4 +125,4 @@ Gerado por `generate_prd`, opcionalmente incorporando descoberta/visão/estraté
 
 ## Formato de exportação (`export_markdown`/`format_prd_markdown`)
 
-A saída em Markdown do PRD segue diretamente `../standards/prd_standard.md` — mesma estrutura de seções que o AQuA-QE Product Owner já sabe interpretar. Visão e estratégia, quando exportadas para registro próprio (não consumidas pelo Product Owner), seguem `../../knowledge/templates/product_vision.md` e `.../product_strategy.md`.
+A saída em Markdown do PRD segue diretamente `../standards/prd_standard.md` — mesma estrutura de seções que o AQuA-QE Product Owner já sabe interpretar. Visão e estratégia, quando exportadas para registro próprio (não consumidas pelo Product Owner), seguem `../../knowledge/templates/product_vision.md` e `.../product_strategy.md`. A priorização (`--saida-priorizacao`) é sempre exportada num arquivo separado do PRD, nunca mesclada nele.

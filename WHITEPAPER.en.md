@@ -31,15 +31,16 @@ These documents aren't decoration: `generate_product_vision` references the Nort
 
 ## 3. Design principles (guardrails)
 
-Five guardrails govern the agent's behavior (`docs/agent/guardrails.md`):
+Six guardrails govern the agent's behavior (`docs/agent/guardrails.md`):
 
 - **GR-1 — Never invent.** Inherited from Product Owner: no discovery, vision, strategy or PRD field is generated without traceable origin in the input source. Fields that can't be identified stay empty, which triggers `pending_clarification`.
 - **GR-M1 — Never invent market data.** `extract_market_context` never lists a competitor or trend that isn't literally cited in the input text, even when the model recognizes the market described and "knows" who the real competitors are.
 - **GR-M2 — Never invent financial metrics.** No ROI, CAC, LTV projection or financial metric is generated without explicit basis in the source.
 - **GR-M3 — Never invent a vision/strategy target.** The vision's `north_star_metric` and each strategy goal's `target`/`timeframe` stay empty when unsupported by the source — never filled with a "typical for the industry" value.
+- **GR-M4 — Never estimate a prioritization number (RICE/WSJF).** Reach, impact, confidence, effort, business value, time criticality, risk reduction and job size always come from `input()` in the CLI; `compute_rice_score`/`compute_wsjf_score` are pure Python, with no LLM call at all.
 - **Cross-cutting guardrail — No automatic approval.** No skill/workflow ever sets `ArtifactStatus.ACCEPTED`. Approval of Vision, Strategy and PRD is always an explicit human act in the CLI, with or without the interactive refinement cycle.
 
-GR-M1/GR-M2/GR-M3 are what sets this agent apart from Product Owner: GR-1 protects against inventing what the source *should* contain but doesn't mention; GR-M1-M3 protect against the opposite, subtler risk — the model filling a gap with knowledge that is *real*, but not authorized by the source, which looks more "correct" on the surface and is therefore more dangerous to miss in review.
+GR-M1/GR-M2/GR-M3/GR-M4 are what sets this agent apart from Product Owner: GR-1 protects against inventing what the source *should* contain but doesn't mention; GR-M1-M4 protect against the opposite, subtler risk — the model (or, for RICE/WSJF, the agent itself) filling a gap with a number that *looks* plausible, but wasn't authorized by the source or the user, which is more dangerous to miss in review than an obvious mistake.
 
 ## 4. Architecture
 
@@ -56,12 +57,13 @@ Input (.txt/Markdown/chat/Jira/Confluence)
    → generate_prd (uses discovery + vision + strategy, when they exist) → validate/review/refine → explicit human acceptance
    → format_prd_markdown → export_markdown
    → [optional] create_confluence_page / update_confluence_page (--publicar-confluence / --atualizar-confluence, after explicit human confirmation)
+   → [optional] classify_moscow or compute_rice_score/compute_wsjf_score (--priorizar, file separate from the PRD)
    → (outside this agent) AQuA-QE Product Owner consumes the PRD via --modo lote --arquivo
 ```
 
 Code layers (`src/aqua_qe_product_manager/`):
 
-- **`models/`** — data structures: `ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft` and the `ArtifactStatus` enum (`draft_validated` / `pending_clarification` / `accepted`).
+- **`models/`** — data structures: `ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft`, `PrioritizedRequirement`/`PriorityInputs` (deliberately outside `PRDDraft`, never changing the handoff contract) and the `ArtifactStatus` enum (`draft_validated` / `pending_clarification` / `accepted`).
 - **`skills/`** — each with a single side effect and a single responsibility (see section 5).
 - **`workflow/`** — orchestrates the skill sequence per artifact: `generate_problem_discovery.py` (no generate/finalize/refine trio — discovery has no formal acceptance cycle), `generate_product_vision.py`, `generate_product_strategy.py`, `generate_prd.py` (the latter three following the `generate_x_draft`/`finalize_x`/`refine_x_draft` trio).
 - **`orchestrator/product_manager.py`** — four thin entry points, one per mode (`handle_discovery`/`handle_vision`/`handle_strategy`/`handle_prd`), each delegating to its corresponding workflow.
@@ -78,6 +80,8 @@ Skills with no LLM (pure Python, deterministic):
 - `parse_prd_markdown` — the inverse: reconstructs a `PRDDraft` from an already-existing PRD `.md`, preserving the original wording field by field (`--modo prd --prd-existente`), instead of the LLM rewriting everything from scratch based on the text.
 - `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`/`format_chat_transcript`, `export_markdown` — input I/O and normalization. `read_jira_issue`/`read_confluence_page` make a real HTTP call (Jira/Confluence Cloud REST API), **read-only** — never writing back.
 - `create_confluence_page`/`update_confluence_page` — this agent's only skills that write to an external system: publish the accepted PRD/vision/strategy as a **new** Confluence Cloud page or update an **already-existing** one (`--publicar-confluence`/`--atualizar-confluence`, mutually exclusive), always after explicit human confirmation, separate from the artifact's own acceptance. Unlike Product Owner, which has the update skill but never wired it to any of its own CLI commands — here it has a real consumer.
+- `validate_moscow_classification` — confirms the MoSCoW classification matches the original requirements 1:1; if it fails, triggers the safe fallback (empty category for all).
+- `compute_rice_score`/`compute_wsjf_score` — compute the RICE/WSJF score from numbers **always** collected from the user (GR-M4), never from the LLM.
 
 Skills with a generator LLM (`OLLAMA_MODEL`, default `mistral`):
 
@@ -85,6 +89,7 @@ Skills with a generator LLM (`OLLAMA_MODEL`, default `mistral`):
 - `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision` (vision).
 - `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy` (strategy).
 - `generate_prd`, `generate_prd_clarifying_questions`, `refine_prd` (PRD).
+- `classify_moscow` — classifies the accepted PRD's functional requirements in MoSCoW, based on explicit language signals in the text (categorical, follows GR-1 normally — RICE/WSJF's numeric invention risk doesn't apply here).
 
 Skills with an independent reviewer LLM (`OLLAMA_REVIEW_MODEL`, default `phi4` — deliberately a different model from the generator, to mitigate *self-preference bias*):
 
@@ -127,6 +132,7 @@ This separation preserves each agent's deterministic/auditable nature — neithe
 - **Complete** (`--modo completo`) — chains discovery → vision → strategy → PRD in a single run, using each accepted artifact as context for the next, with human acceptance at every step. The recommended path for the Product Owner handoff.
 - **`--publicar-confluence`** (`prd`/`completo`/`visao`/`estrategia` modes) — after explicit human acceptance of the artifact, asks for a title and publishes the page to Confluence Cloud (`create_confluence_page`), returning the created URL. Same pattern as Product Owner's own `--publicar-confluence`, extended beyond the PRD.
 - **`--atualizar-confluence <URL or ID>`** (same modes, mutually exclusive with `--publicar-confluence`) — updates an already-existing page (`update_confluence_page`) instead of creating a new one, keeping the title and incrementing the version. No equivalent wired into Product Owner's CLI.
+- **`--priorizar {moscow,rice,wsjf}`** (`prd`/`completo` modes, after the PRD is accepted) — prioritizes the functional requirements. `moscow` classifies automatically from language signals in the PRD's own text; `rice`/`wsjf` ask for each requirement's numbers interactively (GR-M4) and compute the score in pure Python. `--saida-priorizacao` exports the result, always in a file separate from the PRD.
 
 ## 9. Technical stack
 
@@ -148,19 +154,19 @@ Evaluating the agent in production combines three layers that never replace one 
 
 ## 11. What's still missing (deliberately deferred, not forgotten)
 
-- **Formal prioritization** (RICE/MoSCoW/Kano/WSJF) — evaluated and deferred to a future Phase 2, once there's a real backlog large enough to justify it.
-- **Formal MVP scope and business case** — same decision: deferred until there's a real consumer for those artifacts.
+- **Kano prioritization** — **permanently** out of scope, not a phasing question: it structurally depends on customer satisfaction-survey data absent from this agent's input types. MoSCoW/RICE/WSJF are already implemented (`--priorizar`, section 8).
+- **Formal MVP scope and business case** — evaluated and deliberately deferred to a future Phase 2, until there's a real consumer for those artifacts.
 - **Writing to Jira** — this agent only reads Jira tickets; creating or updating a ticket stays exclusive to Product Owner (`create_jira_story`/`update_jira_issue`), which already covers that case.
 - **RAG over `knowledge/methodology/`** — deferred while the knowledge volume still fits directly in the prompt (see section 9).
 - **Resilience to local Ollama infrastructure failures** — same conscious decision as Product Owner: rerun manually instead of adding automatic retry, until there's evidence the complexity cost is worth it.
 
 ## 12. How to run it
 
-See `README.md`/`README.pt.md` for the full installation walkthrough (Python 3.12+, `uv`, Ollama + models, `.env.example` → `.env`) and every usage example for `run.py` (`--modo descoberta`/`visao`/`estrategia`/`prd`/`completo`, `--arquivo`/`--texto`/`--jira`/`--confluence`/`--prd-existente`, `--refinar`, `--saida`, `--publicar-confluence`/`--atualizar-confluence`).
+See `README.md`/`README.pt.md` for the full installation walkthrough (Python 3.12+, `uv`, Ollama + models, `.env.example` → `.env`) and every usage example for `run.py` (`--modo descoberta`/`visao`/`estrategia`/`prd`/`completo`, `--arquivo`/`--texto`/`--jira`/`--confluence`/`--prd-existente`, `--refinar`, `--saida`, `--publicar-confluence`/`--atualizar-confluence`, `--priorizar`/`--saida-priorizacao`).
 
 ## 13. Conclusion
 
-AQuA-QE Product Manager doesn't aim to replace the human Product Manager — it aims to eliminate the strategy vacuum that used to precede the PRD in the flow Product Owner already automates. Discovery, vision and strategy stop being steps skipped for lack of time and become, at minimum, attempted in a structured, traceable way before any requirement gets written. The GR-M1/GR-M2/GR-M3 guardrails exist because the riskiest step to automate with an LLM isn't the one where it errs visibly — it's the one where it gets a real fact right, but one not authorized by the source, and that slips past review unnoticed. The plain-text-artifact handoff with Product Owner keeps both agents auditable and independent, without requiring any implicit trust between them.
+AQuA-QE Product Manager doesn't aim to replace the human Product Manager — it aims to eliminate the strategy vacuum that used to precede the PRD in the flow Product Owner already automates. Discovery, vision and strategy stop being steps skipped for lack of time and become, at minimum, attempted in a structured, traceable way before any requirement gets written. The GR-M1/GR-M2/GR-M3/GR-M4 guardrails exist because the riskiest step to automate with an LLM isn't the one where it errs visibly — it's the one where it gets a real fact right (or a plausible-looking prioritization score), but one not authorized by the source, and that slips past review unnoticed. The plain-text-artifact handoff with Product Owner keeps both agents auditable and independent, without requiring any implicit trust between them.
 
 ---
 

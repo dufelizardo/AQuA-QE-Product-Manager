@@ -20,7 +20,7 @@ Ver `objectives.md` — rastreabilidade e honestidade sobre lacunas acima de com
 
 ## Saídas esperadas
 
-Ver `output_schema.md` — problem statement/personas/JTBD/contexto de mercado (descoberta), visão de produto, estratégia de produto e PRD, sempre com `status` explícito (`draft_validated`, `pending_clarification` ou `accepted`). Opcionalmente, o PRD/visão/estratégia aceitos também podem ser publicados como página nova (`create_confluence_page`, `--publicar-confluence`) ou usados para atualizar uma página já existente (`update_confluence_page`, `--atualizar-confluence`) no Confluence Cloud, sempre sob confirmação humana explícita — nunca automático, e nunca os dois ao mesmo tempo.
+Ver `output_schema.md` — problem statement/personas/JTBD/contexto de mercado (descoberta), visão de produto, estratégia de produto e PRD, sempre com `status` explícito (`draft_validated`, `pending_clarification` ou `accepted`). Opcionalmente, o PRD/visão/estratégia aceitos também podem ser publicados como página nova (`create_confluence_page`, `--publicar-confluence`) ou usados para atualizar uma página já existente (`update_confluence_page`, `--atualizar-confluence`) no Confluence Cloud, sempre sob confirmação humana explícita — nunca automático, e nunca os dois ao mesmo tempo. O PRD aceito também pode ter seus requisitos funcionais priorizados (MoSCoW automático ou RICE/WSJF interativo, `--priorizar`), exportado sempre num arquivo separado do PRD.
 
 ## Comportamentos esperados
 
@@ -36,6 +36,10 @@ Ver `output_schema.md` — problem statement/personas/JTBD/contexto de mercado (
 
 Quando a entrada é `--prd-existente`, o agente pula a geração via LLM inteiramente: `parse_prd_markdown` reconstrói o `PRDDraft` a partir do Markdown, preservando a redação original campo a campo, e o fluxo segue direto para `validate_prd`/`review_prd`/aceite — o mesmo padrão do caminho feliz, só substituindo a etapa "gerar" por "carregar".
 
+### Priorização de requisitos
+
+Com `--priorizar moscow`, o agente classifica cada requisito funcional do PRD aceito com base em sinais de linguagem explícitos no próprio texto do PRD — categoria vazia quando não houver sinal, nunca uma suposição (GR-1). Com `--priorizar rice`/`wsjf`, o agente **nunca estima** os números necessários (reach, impact, confidence, effort, business value, time criticality, risk reduction, job size) — pergunta cada um interativamente ao usuário e calcula o score em Python puro (GR-M4).
+
 ### Fonte ambígua ou incompleta
 
 1. Detecta que não há informação suficiente para um campo obrigatório (ex.: métrica-alvo da visão, concorrente citado).
@@ -44,7 +48,7 @@ Quando a entrada é `--prd-existente`, o agente pula a geração via LLM inteira
 
 ### Fora de escopo
 
-Se o pedido for comunicação entre times, alinhamento de stakeholders, priorização formal, definição de MVP ou business case (Fase 1 deste agente), o agente sinaliza que está fora do seu escopo atual em vez de tentar gerar algo de qualquer forma (ver RULE-007).
+Se o pedido for comunicação entre times, alinhamento de stakeholders, priorização Kano (depende estruturalmente de dados de pesquisa de satisfação de cliente que não existem no tipo de entrada deste agente — permanentemente fora de escopo, não uma questão de fase), definição de MVP ou business case (Fase 1 deste agente), o agente sinaliza que está fora do seu escopo atual em vez de tentar gerar algo de qualquer forma (ver RULE-007).
 
 ## Limites de conhecimento
 
@@ -53,7 +57,7 @@ Se o pedido for comunicação entre times, alinhamento de stakeholders, prioriza
 
 ## Guardrails
 
-Ver `guardrails.md` — nunca inventar (GR-1), nunca inventar dado de mercado (GR-M1), nunca inventar métrica financeira (GR-M2), nunca inventar meta de visão/estratégia (GR-M3), nunca aprovar automaticamente.
+Ver `guardrails.md` — nunca inventar (GR-1), nunca inventar dado de mercado (GR-M1), nunca inventar métrica financeira (GR-M2), nunca inventar meta de visão/estratégia (GR-M3), nunca estimar número de priorização RICE/WSJF (GR-M4), nunca aprovar automaticamente.
 
 ## Padrões de aceitação
 

@@ -96,3 +96,20 @@ def test_handle_existing_prd_le_parseia_e_finaliza(monkeypatch):
     assert chamada["caminho"] == "prd.md"
     assert chamada["texto_parseado"] == "# PRD"
     assert chamada["draft_finalizado"] == "draft-parseado"
+
+
+def test_handle_moscow_classification_delegates_to_workflow(monkeypatch):
+    chamada = {}
+
+    def fake_classify_moscow_draft(requisitos, texto_fonte):
+        chamada["requisitos"] = requisitos
+        chamada["texto_fonte"] = texto_fonte
+        return "classificacao-fake"
+
+    monkeypatch.setattr(product_manager, "classify_moscow_draft", fake_classify_moscow_draft)
+
+    resultado = product_manager.handle_moscow_classification(["req 1", "req 2"], "texto do PRD")
+
+    assert resultado == "classificacao-fake"
+    assert chamada["requisitos"] == ["req 1", "req 2"]
+    assert chamada["texto_fonte"] == "texto do PRD"

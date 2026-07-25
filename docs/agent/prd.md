@@ -24,11 +24,13 @@ Estruturar ideias e problemas de negócio informais em artefatos de descoberta e
 - Gerar e refinar visão de produto e estratégia de produto, com o mesmo ciclo humano-no-loop (gerar → validar → revisar por segundo LLM → perguntas de esclarecimento → refinar → aceite humano explícito) usado no PRD.
 - Gerar e refinar um PRD, incorporando descoberta/visão/estratégia quando disponíveis, ou funcionando só a partir de uma ideia crua quando não estiverem.
 - Exportar o PRD final em Markdown, no mesmo formato que o AQuA-QE Product Owner já consome como entrada (`prd_standard.md` compartilhado).
+- Priorizar os requisitos funcionais do PRD aceito em MoSCoW (automático, a partir de sinal de linguagem no texto) ou RICE/WSJF (números sempre coletados do usuário, nunca estimados — GR-M4), exportado sempre num arquivo separado do PRD.
 
 ## Fora de escopo
 
 - Realizar pesquisa de mercado, entrevistas com clientes ou qualquer atividade de coleta de dados do mundo real — o agente só estrutura o que já foi coletado e informado pelo usuário.
-- Priorização formal (RICE, MoSCoW, Kano, WSJF), definição formal de escopo de MVP e business case (ROI/CAC/LTV) — avaliados e deliberadamente adiados para uma fase futura (ver `WHITEPAPER.md`, seção "O que ainda falta").
+- Priorização Kano — **permanentemente** fora de escopo (não uma questão de fase): depende estruturalmente de dados de pesquisa de satisfação de cliente que não existem no tipo de entrada deste agente (ideia informal/PRD/chat), em nenhuma fase futura.
+- Definição formal de escopo de MVP e business case (ROI/CAC/LTV) — avaliados e deliberadamente adiados para uma fase futura (ver `WHITEPAPER.md`, seção "O que ainda falta").
 - Comunicação entre times e gestão de stakeholders — são atividades interpessoais, não de geração de documento.
 - Transformar o PRD em Épicos/User Stories — isso é responsabilidade do AQuA-QE Product Owner, que recebe o PRD como entrada.
 - Aprovar definitivamente qualquer artefato sem revisão humana (ver `guardrails.md`).
@@ -43,11 +45,12 @@ Estruturar ideias e problemas de negócio informais em artefatos de descoberta e
 6. Gerar um PRD (`generate_prd`), incorporando descoberta/visão/estratégia quando existirem no contexto da sessão.
 7. Quando a fonte for ambígua ou incompleta, parar e solicitar esclarecimento em vez de gerar uma suposição não sinalizada (ver `guardrails.md`).
 8. Exportar o PRD validado em Markdown, compatível com a entrada esperada pelo AQuA-QE Product Owner.
+9. Priorizar os requisitos funcionais do PRD aceito, em MoSCoW (`classify_moscow`) ou RICE/WSJF (`compute_rice_score`/`compute_wsjf_score`, números sempre coletados do usuário), exportando o resultado num arquivo separado do PRD.
 
 ## Requisitos não funcionais
 
 - **Rastreabilidade** — todo elemento gerado (problem statement, persona, JTBD, concorrente, meta estratégica) deve ser rastreável à fonte de entrada.
-- **Nenhuma invenção de dado de mercado ou financeiro** — ver GR-M1/GR-M2 em `guardrails.md`, o guardrail mais crítico deste agente.
+- **Nenhuma invenção de dado de mercado, financeiro ou de priorização RICE/WSJF** — ver GR-M1/GR-M2/GR-M4 em `guardrails.md`, os guardrails mais críticos deste agente.
 - **Nenhuma aprovação automática** — toda saída é um rascunho validado, sujeito a aceite humano explícito.
 - **Compatibilidade de formato com o AQuA-QE Product Owner** — o PRD exportado usa exatamente os mesmos campos que o `PRDDraft` do Product Owner já sabe interpretar.
 

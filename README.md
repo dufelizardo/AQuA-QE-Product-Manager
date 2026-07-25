@@ -29,8 +29,8 @@ No change is needed in Product Owner's code — it already accepts a `.md` file 
 - **`docs/agent/`** — this agent's full specification: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt, and `agent_manifest.yaml`.
 - **`knowledge/methodology/`** — methodological material that guides the agent (JTBD, North Star Framework, BABOK, ISO 29148).
 - **`knowledge/templates/`** — pure structure, no knowledge (templates for Problem Statement, Persona, Product Vision, Product Strategy, PRD).
-- **`src/aqua_qe_product_manager/skills/`** — the agent's skills in Python (read text file/Jira ticket/Confluence page, parse/format chat transcript, identify problem statement, synthesize personas, extract jobs to be done, extract market context, generate/validate/review/refine product vision, generate/validate/review/refine product strategy, generate/validate/review/refine/load PRD, export to Markdown, publish/update Confluence page). Full list in `docs/agent/skills.md`.
-- **`src/aqua_qe_product_manager/models/`** — the agent's data structures (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — the latter with the exact same fields as Product Owner's `PRDDraft`).
+- **`src/aqua_qe_product_manager/skills/`** — the agent's skills in Python (read text file/Jira ticket/Confluence page, parse/format chat transcript, identify problem statement, synthesize personas, extract jobs to be done, extract market context, generate/validate/review/refine product vision, generate/validate/review/refine product strategy, generate/validate/review/refine/load PRD, export to Markdown, publish/update Confluence page, prioritize requirements via MoSCoW/RICE/WSJF). Full list in `docs/agent/skills.md`.
+- **`src/aqua_qe_product_manager/models/`** — the agent's data structures (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — the latter with the exact same fields as Product Owner's `PRDDraft` —, PrioritizedRequirement/PriorityInputs).
 - **`src/aqua_qe_product_manager/workflow/`** — orchestration of the skill sequence per artifact (discovery, vision, strategy, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — entry point that decides which workflow to run per mode.
 - **`src/aqua_qe_product_manager/services/`** — external integrations: `llm_service` (local Ollama, generation/review), `jira_service` (Jira Cloud REST API, **read-only**) and `confluence_service` (Confluence Cloud REST API, reading + new-page creation + existing-page update, used by `--publicar-confluence`/`--atualizar-confluence`). No RAG at this phase.
@@ -94,6 +94,12 @@ uv run python run.py --modo prd --texto "<idea>" --refinar --atualizar-confluenc
 
 # Publish the product vision (not just the PRD) as a Confluence page
 uv run python run.py --modo visao --texto "<idea>" --refinar --publicar-confluence
+
+# Prioritize the PRD's requirements in MoSCoW (automatic, from the text)
+uv run python run.py --modo prd --texto "<idea>" --refinar --priorizar moscow --saida-priorizacao priorizacao.md
+
+# Prioritize in RICE (asks for the numbers interactively, never estimated by the agent)
+uv run python run.py --modo prd --texto "<idea>" --refinar --priorizar rice
 ```
 
 `--saida` is optional in every mode that produces an artifact (without it, the result is only printed to the terminal). `--refinar` enables the interactive clarifying-questions/refinement cycle before acceptance — but acceptance itself is **always** explicitly asked, with or without this flag (see `docs/agent/acceptance_patterns.md`).
@@ -104,11 +110,13 @@ uv run python run.py --modo visao --texto "<idea>" --refinar --publicar-confluen
 
 `--jira`/`--confluence` are read-only — they fetch the source text (ticket summary+description, or page title+body), but this agent never writes back to those systems; write-back and ticket/page creation stay exclusive to Product Owner.
 
+`--priorizar {moscow,rice,wsjf}` (only with `--modo prd`/`completo`, after the PRD is accepted) prioritizes the functional requirements — `moscow` classifies automatically from language signals in the PRD (empty category when there's no signal); `rice`/`wsjf` ask for each requirement's numbers interactively and compute the score in pure Python — the agent never estimates those numbers. `--saida-priorizacao` exports the result, always in a file separate from the PRD's own `--saida`.
+
 The `completo` mode is the recommended path for the Product Owner handoff: it chains discovery, vision, strategy and PRD in a single run, using each accepted artifact as context for the next, and produces a single `prd.md` ready for `--modo lote --arquivo prd.md` in Product Owner. The standalone `prd` mode, with no prior context, behaves like Product Owner's own `--modo prd` (raw idea → PRD) — useful when formal discovery/vision/strategy aren't needed.
 
 ## Status
 
-`docs/agent/`, `docs/standards/` and `knowledge/` are filled with real content. In `src/`, all skills and the four workflows (discovery, vision, strategy, PRD) are implemented and covered by tests (LLM mocks, no real Ollama/Jira/Confluence call). Prioritization (RICE/MoSCoW/Kano/WSJF), formal MVP scope and business case are left for a future Phase 2 — deliberately out of scope for this first version (see `docs/agent/prd.md`, "Fora de escopo" section).
+`docs/agent/`, `docs/standards/` and `knowledge/` are filled with real content. In `src/`, all skills and the four workflows (discovery, vision, strategy, PRD) are implemented and covered by tests (LLM mocks, no real Ollama/Jira/Confluence call). MoSCoW/RICE/WSJF prioritization is implemented (`--priorizar`); Kano prioritization is permanently out of scope (depends on satisfaction-survey data absent from this agent's input types). Formal MVP scope and business case are left for a future Phase 2 — deliberately out of scope for this first version (see `docs/agent/prd.md`, "Fora de escopo" section).
 
 This project has its own git repository, independent from the workspace root monorepo (per the "every new project gets its own repository" convention — see the workspace root `CLAUDE.md`).
 

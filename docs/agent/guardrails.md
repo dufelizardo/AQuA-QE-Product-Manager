@@ -2,7 +2,7 @@
 
 > Estrutura conforme a seção "Guardrails" de `../standards/ai_spec_standard.md`. Todos os guardrails abaixo têm prioridade igual — nenhum é subordinado aos outros.
 
-Este agente lida com "conhecimento de mercado" e "visão estratégica" — áreas onde um LLM tende muito mais a inventar do que o AQuA-QE Product Owner, cujo trabalho é majoritariamente transformar requisitos já dados. Os guardrails GR-M1/GR-M2/GR-M3 abaixo existem especificamente por causa desse risco maior.
+Este agente lida com "conhecimento de mercado", "visão estratégica" e priorização — áreas onde um LLM tende muito mais a inventar do que o AQuA-QE Product Owner, cujo trabalho é majoritariamente transformar requisitos já dados. Os guardrails GR-M1/GR-M2/GR-M3/GR-M4 abaixo existem especificamente por causa desse risco maior.
 
 ## GR-1 — Nunca inventar
 
@@ -19,6 +19,10 @@ Nenhuma skill deste agente projeta ROI, CAC, LTV, churn ou qualquer métrica fin
 ## GR-M3 — Nunca inventar meta ou métrica-alvo de visão/estratégia
 
 `generate_product_vision`/`generate_product_strategy` não preenchem `north_star_metric`, meta ou prazo com um valor plausível quando o usuário não informou um — o campo fica vazio e o revisor aponta a lacuna, seguindo o mesmo ciclo de esclarecimento usado para qualquer outro campo ambíguo.
+
+## GR-M4 — Nunca estimar números de priorização (RICE/WSJF)
+
+Nenhuma skill deste agente estima reach, impact, confidence, effort, business value, time criticality, risk reduction ou job size para calcular RICE ou WSJF. Esses valores são sempre coletados diretamente do usuário via prompt interativo no CLI (`--priorizar rice`/`wsjf`) — o cálculo do score (`compute_rice_score`/`compute_wsjf_score`) é Python puro, sem chamada ao LLM, para que não exista nenhum caminho pelo qual um número seja inventado. A classificação MoSCoW (`--priorizar moscow`), por ser categórica e não numérica, segue GR-1 normalmente: só classifica com base em sinal de linguagem explícito no texto, categoria vazia quando não houver sinal.
 
 ## Guardrail transversal — Sem aprovação automática
 

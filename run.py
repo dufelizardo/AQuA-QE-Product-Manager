@@ -11,11 +11,14 @@ sys.path.insert(0, str(_RAIZ / "src"))
 load_dotenv(_RAIZ / ".env")
 
 from aqua_qe_product_manager.models import (  # noqa: E402
+    MOSCOW_CATEGORIAS,
     ArtifactStatus,
     JobToBeDone,
     MarketAnalysis,
     PRDDraft,
     Persona,
+    PrioritizedRequirement,
+    PriorityInputs,
     ProblemStatement,
     ProductStrategy,
     ProductVision,
@@ -23,10 +26,13 @@ from aqua_qe_product_manager.models import (  # noqa: E402
 from aqua_qe_product_manager.orchestrator.product_manager import (  # noqa: E402
     handle_discovery,
     handle_existing_prd,
+    handle_moscow_classification,
     handle_prd,
     handle_strategy,
     handle_vision,
 )
+from aqua_qe_product_manager.skills.compute_rice_score import compute_rice_score  # noqa: E402
+from aqua_qe_product_manager.skills.compute_wsjf_score import compute_wsjf_score  # noqa: E402
 from aqua_qe_product_manager.skills.create_confluence_page import (  # noqa: E402
     create_confluence_page,
 )
@@ -284,14 +290,143 @@ def _publicar_ou_atualizar_confluence(
         print(f"publicado no Confluence: {url}")
 
 
+def _imprimir_priorizacao(itens: list[PrioritizedRequirement]) -> None:
+    for item in itens:
+        if item.score is not None:
+            print(f"  - [{item.score:.2f}] {item.requirement}")
+        else:
+            categoria = item.moscow or "(não classificado)"
+            print(f"  - [{categoria}] {item.requirement}")
+            if item.moscow_justification:
+                print(f"      {item.moscow_justification}")
+
+
+def _corrigir_moscow_manualmente(
+    itens: list[PrioritizedRequirement],
+) -> list[PrioritizedRequirement]:
+    """Correção manual por item — priorização é decisão de negócio do humano, não um fato a pedir de novo ao LLM."""
+    print("\nCorreção manual (deixe em branco para manter a categoria atual):")
+    for item in itens:
+        atual = item.moscow or "(vazio)"
+        resposta = (
+            input(
+                f"  {item.requirement}\n"
+                f"  categoria atual: {atual} — nova (must/should/could/wont/vazio) > "
+            )
+            .strip()
+            .lower()
+        )
+        if resposta in MOSCOW_CATEGORIAS:
+            item.moscow = resposta
+            item.moscow_justification = "categoria definida manualmente pelo usuário"
+    return itens
+
+
+def _priorizar_moscow(
+    texto_fonte: str, requisitos: list[str]
+) -> list[PrioritizedRequirement]:
+    itens = handle_moscow_classification(requisitos, texto_fonte)
+    print("\n--- priorização MoSCoW ---")
+    _imprimir_priorizacao(itens)
+
+    if not _perguntar_sim_nao("\nAceitar esta priorização?"):
+        itens = _corrigir_moscow_manualmente(itens)
+        print("\n--- priorização corrigida ---")
+        _imprimir_priorizacao(itens)
+
+    return itens
+
+
+def _coletar_float(mensagem: str) -> float:
+    while True:
+        bruto = input(mensagem).strip().replace(",", ".")
+        try:
+            return float(bruto)
+        except ValueError:
+            print("  valor inválido, informe um número.")
+
+
+def _priorizar_numerico(metodo: str, requisitos: list[str]) -> list[PrioritizedRequirement]:
+    """RICE/WSJF interativo: todos os números vêm do usuário — o agente nunca estima nenhum (GR-M4)."""
+    print(f"\n--- priorização {metodo.upper()} (informe os números para cada requisito) ---")
+    itens: list[PrioritizedRequirement] = []
+    for requisito in requisitos:
+        print(f"\n{requisito}")
+        inputs = PriorityInputs()
+        if metodo == "rice":
+            inputs.reach = _coletar_float("  reach: ")
+            inputs.impact = _coletar_float("  impact: ")
+            inputs.confidence = _coletar_float("  confidence (0-1): ")
+            inputs.effort = _coletar_float("  effort: ")
+            score = compute_rice_score(inputs.reach, inputs.impact, inputs.confidence, inputs.effort)
+        else:
+            inputs.business_value = _coletar_float("  business value: ")
+            inputs.time_criticality = _coletar_float("  time criticality: ")
+            inputs.risk_reduction = _coletar_float("  risk reduction: ")
+            inputs.job_size = _coletar_float("  job size: ")
+            score = compute_wsjf_score(
+                inputs.business_value,
+                inputs.time_criticality,
+                inputs.risk_reduction,
+                inputs.job_size,
+            )
+        itens.append(
+            PrioritizedRequirement(
+                requirement=requisito, metodo_numerico=metodo, score=score, inputs=inputs
+            )
+        )
+
+    itens.sort(key=lambda item: item.score or 0.0, reverse=True)
+    print(f"\n--- resultado {metodo.upper()} (maior para menor) ---")
+    _imprimir_priorizacao(itens)
+    return itens
+
+
+def _formatar_priorizacao_markdown(itens: list[PrioritizedRequirement], metodo: str) -> str:
+    """Formata a priorização em Markdown — sempre exportada em arquivo separado do PRD (--saida-priorizacao), nunca mesclada nele."""
+    if metodo == "moscow":
+        linhas = [
+            f"- **{item.moscow or '(não classificado)'}** — {item.requirement}"
+            + (f"\n  {item.moscow_justification}" if item.moscow_justification else "")
+            for item in itens
+        ]
+    else:
+        linhas = [f"- **{item.score:.2f}** — {item.requirement}" for item in itens]
+    return f"# Priorização ({metodo.upper()})\n\n" + "\n".join(linhas) + "\n"
+
+
+def _priorizar_requisitos(
+    draft: PRDDraft,
+    texto_fonte: str,
+    priorizar: str | None,
+    saida_priorizacao: str | None,
+) -> None:
+    if not priorizar:
+        return
+    if not draft.functional_requirements:
+        print("\nSem requisitos funcionais para priorizar.")
+        return
+
+    if priorizar == "moscow":
+        itens = _priorizar_moscow(texto_fonte, draft.functional_requirements)
+    else:
+        itens = _priorizar_numerico(priorizar, draft.functional_requirements)
+
+    if saida_priorizacao:
+        export_markdown(_formatar_priorizacao_markdown(itens, priorizar), saida_priorizacao)
+        print(f"priorização exportada para: {saida_priorizacao}")
+
+
 def _finalizar_prd_interativo(
     draft: PRDDraft,
     saida: str | None,
     refinar: bool,
     publicar_confluence: bool = False,
     atualizar_confluence: str | None = None,
+    priorizar: str | None = None,
+    saida_priorizacao: str | None = None,
 ) -> str | None:
-    """Ciclo de refinamento/aceite/exportação/publicação compartilhado, independente de o PRD ter sido gerado ou carregado de um arquivo existente."""
+    """Ciclo de refinamento/aceite/exportação/publicação/priorização compartilhado, independente de o PRD ter sido gerado ou carregado de um arquivo existente."""
     _imprimir_prd(draft)
 
     if refinar:
@@ -308,6 +443,7 @@ def _finalizar_prd_interativo(
         print(f"exportado para: {saida}")
 
     _publicar_ou_atualizar_confluence(texto_final, publicar_confluence, atualizar_confluence)
+    _priorizar_requisitos(draft, texto_final, priorizar, saida_priorizacao)
 
     return texto_final
 
@@ -319,12 +455,20 @@ def _rodar_prd(
     refinar: bool,
     publicar_confluence: bool = False,
     atualizar_confluence: str | None = None,
+    priorizar: str | None = None,
+    saida_priorizacao: str | None = None,
 ) -> str | None:
     """Gera o PRD; retorna o texto formatado se aceito, ou None."""
     draft = handle_prd(ideia, contexto)
     print("\n--- PRD ---")
     return _finalizar_prd_interativo(
-        draft, saida, refinar, publicar_confluence, atualizar_confluence
+        draft,
+        saida,
+        refinar,
+        publicar_confluence,
+        atualizar_confluence,
+        priorizar,
+        saida_priorizacao,
     )
 
 
@@ -334,12 +478,20 @@ def _rodar_prd_existente(
     refinar: bool,
     publicar_confluence: bool = False,
     atualizar_confluence: str | None = None,
+    priorizar: str | None = None,
+    saida_priorizacao: str | None = None,
 ) -> str | None:
-    """Carrega um PRD existente e aplica o mesmo ciclo de validação/revisão/refinamento/aceite/publicação, preservando a redação original nos campos que o refinamento não tocar."""
+    """Carrega um PRD existente e aplica o mesmo ciclo de validação/revisão/refinamento/aceite/publicação/priorização, preservando a redação original nos campos que o refinamento não tocar."""
     draft = handle_existing_prd(caminho)
     print("\n--- PRD carregado de arquivo existente ---")
     return _finalizar_prd_interativo(
-        draft, saida, refinar, publicar_confluence, atualizar_confluence
+        draft,
+        saida,
+        refinar,
+        publicar_confluence,
+        atualizar_confluence,
+        priorizar,
+        saida_priorizacao,
     )
 
 
@@ -388,6 +540,8 @@ def _rodar_completo(
     refinar: bool,
     publicar_confluence: bool = False,
     atualizar_confluence: str | None = None,
+    priorizar: str | None = None,
+    saida_priorizacao: str | None = None,
 ) -> None:
     """Encadeia descoberta -> visão -> estratégia -> PRD numa execução só, com aceite humano em cada etapa."""
     problem_statement, personas, jobs, market_analysis = _rodar_descoberta(texto)
@@ -411,7 +565,14 @@ def _rodar_completo(
 
     contexto_prd = {**contexto_visao, "strategy": strategy}
     prd_aceito = _rodar_prd(
-        texto, contexto_prd, saida, refinar, publicar_confluence, atualizar_confluence
+        texto,
+        contexto_prd,
+        saida,
+        refinar,
+        publicar_confluence,
+        atualizar_confluence,
+        priorizar,
+        saida_priorizacao,
     )
     if prd_aceito is None:
         print("\nExecução interrompida: PRD descartado.")
@@ -474,6 +635,22 @@ def main() -> None:
             "--publicar-confluence."
         ),
     )
+    parser.add_argument(
+        "--priorizar",
+        choices=["moscow", "rice", "wsjf"],
+        help=(
+            "Modos prd/completo: após aceitar o PRD, prioriza os requisitos "
+            "funcionais. 'moscow' classifica automaticamente a partir de "
+            "sinais de linguagem no PRD; 'rice'/'wsjf' pedem os números de "
+            "cada requisito interativamente (o agente nunca estima esses "
+            "números — GR-M4) e calculam o score em Python puro."
+        ),
+    )
+    parser.add_argument(
+        "--saida-priorizacao",
+        dest="saida_priorizacao",
+        help="Caminho do .md exportado com a priorização, sempre separado do --saida do PRD.",
+    )
     args = parser.parse_args()
 
     if not any([args.arquivo, args.texto, args.jira, args.confluence, args.prd_existente]):
@@ -490,6 +667,9 @@ def main() -> None:
         parser.error(f"--publicar-confluence só é válido com --modo {'/'.join(_modos_confluence)}.")
     if args.atualizar_confluence and args.modo not in _modos_confluence:
         parser.error(f"--atualizar-confluence só é válido com --modo {'/'.join(_modos_confluence)}.")
+    _modos_priorizacao = ("prd", "completo")
+    if args.priorizar and args.modo not in _modos_priorizacao:
+        parser.error(f"--priorizar só é válido com --modo {'/'.join(_modos_priorizacao)}.")
 
     if args.prd_existente:
         _rodar_prd_existente(
@@ -498,6 +678,8 @@ def main() -> None:
             args.refinar,
             args.publicar_confluence,
             args.atualizar_confluence,
+            args.priorizar,
+            args.saida_priorizacao,
         )
         return
 
@@ -537,10 +719,18 @@ def main() -> None:
             args.refinar,
             args.publicar_confluence,
             args.atualizar_confluence,
+            args.priorizar,
+            args.saida_priorizacao,
         )
     else:
         _rodar_completo(
-            texto, args.saida, args.refinar, args.publicar_confluence, args.atualizar_confluence
+            texto,
+            args.saida,
+            args.refinar,
+            args.publicar_confluence,
+            args.atualizar_confluence,
+            args.priorizar,
+            args.saida_priorizacao,
         )
 
 

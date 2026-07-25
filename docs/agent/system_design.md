@@ -19,6 +19,7 @@ Entrada (.txt/Markdown/chat/Jira/Confluence)
       → aceite humano explícito
    → format_prd_markdown → export_markdown
    → [opcional] create_confluence_page / update_confluence_page (--publicar-confluence / --atualizar-confluence, após confirmação humana explícita)
+   → [opcional] classify_moscow ou compute_rice_score/compute_wsjf_score (--priorizar, arquivo separado do PRD)
    → (fora deste agente) AQuA-QE Product Owner consome o PRD via --modo lote --arquivo
 ```
 
@@ -29,7 +30,7 @@ Caminho alternativo, só para PRD (`--modo prd --prd-existente arquivo.md`): `pa
 - **Orquestrador/Agente** — decide a sequência de skills a chamar e quando interromper o fluxo por ambiguidade (ver `agent_design.md`). Implementado em `../../src/aqua_qe_product_manager/orchestrator/product_manager.py`.
 - **Workflows** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD), implementados em `../../src/aqua_qe_product_manager/workflow/`.
 - **Skills** — funções descritas em `skills.md`, implementadas em `../../src/aqua_qe_product_manager/skills/`.
-- **Modelos de dados** — estruturas (`ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft`) implementadas em `../../src/aqua_qe_product_manager/models/`, conforme `output_schema.md`.
+- **Modelos de dados** — estruturas (`ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft`, `PrioritizedRequirement`/`PriorityInputs`) implementadas em `../../src/aqua_qe_product_manager/models/`, conforme `output_schema.md`. `PrioritizedRequirement` fica deliberadamente fora de `PRDDraft` — nunca altera o contrato de handoff byte-idêntico ao Product Owner.
 - **Fontes de conhecimento** — `knowledge/methodology/` (JTBD, North Star Framework), consumidas diretamente pelos prompts das skills (sem RAG nesta fase — volume pequeno o suficiente para caber direto no contexto, ver `context_engineering.md`).
 - **Integrações externas** — `services/jira_service.py` e `services/confluence_service.py` (Jira Cloud e Confluence Cloud REST API, mesmas credenciais). Jira é somente leitura (escrita/criação de tickets continua exclusiva do AQuA-QE Product Owner). Confluence tem duas operações de escrita — `create_page`/`create_confluence_page` (página nova) e `update_page`/`update_confluence_page` (página existente, mantendo título e incrementando versão) — ambas disponíveis para PRD, Visão e Estratégia.
 - **Interfaces externas** — entrada: arquivo `.txt`/Markdown, texto de chat, ticket Jira Cloud ou página Confluence Cloud; saída: arquivo Markdown exportado (`export_markdown`/`format_prd_markdown`/formatadores de visão/estratégia), consumido pelo AQuA-QE Product Owner como entrada normal (só o PRD), e/ou uma página nova ou atualizada no Confluence Cloud (`create_confluence_page`/`update_confluence_page`, opcional, sempre após aceite humano do artefato).
@@ -42,14 +43,15 @@ Caminho alternativo, só para PRD (`--modo prd --prd-existente arquivo.md`): `pa
 4. Estratégia de produto é gerada a partir da visão aceita, mesmo ciclo.
 5. PRD é gerado incorporando descoberta/visão/estratégia (quando existirem na mesma sessão) ou só a partir da ideia crua (quando não existirem) — mesmo ciclo de validação/revisão/refinamento/aceite.
 6. O PRD (e, nos modos isolados, Visão/Estratégia) aceito é formatado e exportado (`export_markdown`) e, opcionalmente, publicado como página nova (`create_confluence_page`, `--publicar-confluence`) ou usado para atualizar uma página já existente (`update_confluence_page`, `--atualizar-confluence`) no Confluence Cloud — sempre sob uma segunda confirmação humana explícita, distinta do aceite do artefato, e nunca os dois ao mesmo tempo.
-7. A aprovação final de cada artefato é sempre um passo humano, fora da responsabilidade do agente.
+7. Opcionalmente, só para PRD, os requisitos funcionais são priorizados (`--priorizar moscow/rice/wsjf`) — MoSCoW classifica automaticamente a partir de sinais de linguagem do próprio PRD; RICE/WSJF pedem os números interativamente ao usuário (nunca estimados pelo agente, GR-M4) e calculam o score em Python puro. Sempre exportado num arquivo separado do PRD (`--saida-priorizacao`).
+8. A aprovação final de cada artefato é sempre um passo humano, fora da responsabilidade do agente.
 
 ## Modos de operação
 
 - **Descoberta** — sintetiza problem statement/personas/JTBD/mercado, sem ciclo de aceite formal (são inputs estruturados, não artefatos "aceitos" isoladamente).
 - **Visão** — gera e refina a visão de produto até aceite humano. Aceita `--publicar-confluence`/`--atualizar-confluence`.
 - **Estratégia** — gera e refina a estratégia de produto a partir da visão aceita. Aceita `--publicar-confluence`/`--atualizar-confluence`.
-- **PRD** — gera e refina o PRD, o artefato terminal desta fase, pronto para o handoff ao AQuA-QE Product Owner. Com `--prd-existente`, carrega um PRD `.md` já pronto (`parse_prd_markdown`) em vez de gerar um novo, e aplica o mesmo ciclo de validação/revisão/refinamento a partir dele. Aceita `--publicar-confluence`/`--atualizar-confluence`.
+- **PRD** — gera e refina o PRD, o artefato terminal desta fase, pronto para o handoff ao AQuA-QE Product Owner. Com `--prd-existente`, carrega um PRD `.md` já pronto (`parse_prd_markdown`) em vez de gerar um novo, e aplica o mesmo ciclo de validação/revisão/refinamento a partir dele. Aceita `--publicar-confluence`/`--atualizar-confluence` e `--priorizar moscow/rice/wsjf`.
 - **Completo** — encadeia os quatro modos acima numa execução só, com aceite humano em cada etapa. Também aceita `--publicar-confluence`/`--atualizar-confluence`, aplicado à etapa final de PRD.
 
 ## Restrições técnicas

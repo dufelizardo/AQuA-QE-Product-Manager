@@ -43,11 +43,11 @@ Entrada (.txt/Markdown/chat/Jira/Confluence)
   → CLI (run.py) → orchestrator/product_manager.py → workflow/* → skills/* → models/* → services/*
 ```
 
-- `src/aqua_qe_product_manager/models/` — `ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft` (mesmos campos exatos do `PRDDraft` do Product Owner), `ChatMessage`, enum `ArtifactStatus`.
-- `src/aqua_qe_product_manager/skills/` — 24 funções de responsabilidade única (ver `docs/agent/skills.md`).
-- `src/aqua_qe_product_manager/workflow/` — orquestra a sequência de skills por artefato (`generate_problem_discovery`, `generate_product_vision`, `generate_product_strategy`, `generate_prd`).
-- `src/aqua_qe_product_manager/orchestrator/product_manager.py` — `handle_discovery`/`handle_vision`/`handle_strategy`/`handle_prd`, um por modo.
-- `src/aqua_qe_product_manager/services/` — integrações externas: `llm_service` (Ollama), `jira_service`/`confluence_service` (Jira Cloud/Confluence Cloud REST API + httpx, **apenas leitura**). Sem RAG nesta fase.
+- `src/aqua_qe_product_manager/models/` — `ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft` (mesmos campos exatos do `PRDDraft` do Product Owner), `PrioritizedRequirement`/`PriorityInputs`, `ChatMessage`, enum `ArtifactStatus`.
+- `src/aqua_qe_product_manager/skills/` — funções de responsabilidade única (ver `docs/agent/skills.md`).
+- `src/aqua_qe_product_manager/workflow/` — orquestra a sequência de skills por artefato (`generate_problem_discovery`, `generate_product_vision`, `generate_product_strategy`, `generate_prd`, `classify_moscow_draft`).
+- `src/aqua_qe_product_manager/orchestrator/product_manager.py` — `handle_discovery`/`handle_vision`/`handle_strategy`/`handle_prd`/`handle_moscow_classification`, um por modo.
+- `src/aqua_qe_product_manager/services/` — integrações externas: `llm_service` (Ollama), `jira_service` (Jira Cloud REST API, **apenas leitura**), `confluence_service` (Confluence Cloud REST API — leitura, criação de página nova e atualização de página existente, usado por `--publicar-confluence`/`--atualizar-confluence`). Sem RAG nesta fase.
 
 ## Convenções críticas
 
@@ -59,7 +59,7 @@ Entrada (.txt/Markdown/chat/Jira/Confluence)
 - **Testes sempre mockam** Ollama/Jira/Confluence — nenhum teste em `tests/` faz chamada real de rede. Ao adicionar um teste para uma skill/service novo, siga esse padrão.
 - **`--jira`/`--confluence` são apenas leitura**: `read_jira_issue`/`read_confluence_page` buscam texto de origem, nunca escrevem de volta — escrita/criação de ticket/página continua exclusiva do AQuA-QE Product Owner.
 - **PRD é o único artefato de handoff** para o AQuA-QE Product Owner — `format_prd_markdown` produz Markdown byte-compatível com o que o Product Owner já sabe interpretar via `--modo lote --arquivo`. Visão e Estratégia, quando exportadas, seguem `knowledge/templates/product_vision.md`/`product_strategy.md`, mas não são consumidas pelo Product Owner.
-- **Priorização (RICE/MoSCoW/Kano/WSJF), MVP scope formal e business case** foram avaliados e deliberadamente adiados para uma Fase 2 futura — não implementar especulativamente; ver `docs/agent/prd.md`, seção "Fora de escopo".
+- **Priorização MoSCoW/RICE/WSJF está implementada** (`--priorizar {moscow,rice,wsjf}`, só com `--modo prd`/`completo`): `moscow` classifica por sinal de linguagem no texto (LLM, categórico); `rice`/`wsjf` coletam os números sempre via `input()` interativo — nunca estimados pelo LLM (GR-M4/RULE-M3) — e calculam o score em Python puro (`compute_rice_score`/`compute_wsjf_score`). **Kano fica permanentemente fora de escopo** (não "adiado"): depende de dados de pesquisa de satisfação de cliente, ausentes do tipo de entrada deste agente. MVP scope formal e business case continuam adiados para uma Fase 2 futura; ver `docs/agent/prd.md`, seção "Fora de escopo".
 - **Sem RAG/embeddings nesta fase** — `knowledge/methodology/` é pequeno o suficiente para caber direto no prompt de cada skill (ver `docs/agent/context_engineering.md`).
 
 ## Onde procurar mais detalhe

@@ -29,8 +29,8 @@ Nenhuma mudança é necessária no código do Product Owner — ele já aceita a
 - **`docs/agent/`** — especificação completa deste agente: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt e o `agent_manifest.yaml`.
 - **`knowledge/methodology/`** — material metodológico que orienta o agente (JTBD, North Star Framework, BABOK, ISO 29148).
 - **`knowledge/templates/`** — estrutura pura, sem conhecimento (templates de Problem Statement, Persona, Visão de Produto, Estratégia de Produto, PRD).
-- **`src/aqua_qe_product_manager/skills/`** — skills do agente em Python (ler arquivo de texto/ticket Jira/página Confluence, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar/carregar o PRD, exportar em Markdown, publicar/atualizar página no Confluence). Lista completa em `docs/agent/skills.md`.
-- **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner).
+- **`src/aqua_qe_product_manager/skills/`** — skills do agente em Python (ler arquivo de texto/ticket Jira/página Confluence, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar/carregar o PRD, exportar em Markdown, publicar/atualizar página no Confluence, priorizar requisitos em MoSCoW/RICE/WSJF). Lista completa em `docs/agent/skills.md`.
+- **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner —, PrioritizedRequirement/PriorityInputs).
 - **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
 - **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama local, geração/revisão), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova + atualização de página existente, usadas por `--publicar-confluence`/`--atualizar-confluence`). Sem RAG nesta fase.
@@ -94,6 +94,12 @@ uv run python run.py --modo prd --texto "<ideia>" --refinar --atualizar-confluen
 
 # Publicar a visão de produto (não só o PRD) como página no Confluence
 uv run python run.py --modo visao --texto "<ideia>" --refinar --publicar-confluence
+
+# Priorizar os requisitos do PRD em MoSCoW (automático, a partir do texto)
+uv run python run.py --modo prd --texto "<ideia>" --refinar --priorizar moscow --saida-priorizacao priorizacao.md
+
+# Priorizar em RICE (pede os números interativamente, nunca estimados pelo agente)
+uv run python run.py --modo prd --texto "<ideia>" --refinar --priorizar rice
 ```
 
 `--saida` é opcional em todos os modos que produzem artefato (sem ela, o resultado só é impresso no terminal). `--refinar` ativa o ciclo interativo de perguntas/refinamento antes do aceite — mas o aceite em si é **sempre** perguntado explicitamente, com ou sem essa flag (ver `docs/agent/acceptance_patterns.md`).
@@ -104,11 +110,13 @@ uv run python run.py --modo visao --texto "<ideia>" --refinar --publicar-conflue
 
 `--jira`/`--confluence` são apenas leitura — buscam o texto de origem (resumo+descrição do ticket, ou título+corpo da página), mas este agente nunca escreve de volta nesses sistemas; write-back e criação de ticket/página continuam exclusivos do Product Owner.
 
+`--priorizar {moscow,rice,wsjf}` (só com `--modo prd`/`completo`, depois do PRD aceito) prioriza os requisitos funcionais — `moscow` classifica automaticamente a partir de sinal de linguagem no PRD (categoria vazia quando não houver sinal); `rice`/`wsjf` pedem os números de cada requisito interativamente e calculam o score em Python puro — o agente nunca estima esses números. `--saida-priorizacao` exporta o resultado, sempre num arquivo separado do `--saida` do PRD.
+
 O modo `completo` é o caminho recomendado para o handoff ao Product Owner: encadeia descoberta, visão, estratégia e PRD numa execução só, usando cada artefato aceito como contexto para o próximo, e produz um único `prd.md` pronto para `--modo lote --arquivo prd.md` no Product Owner. O modo `prd` isolado, sem contexto prévio, se comporta como o `--modo prd` do Product Owner (ideia crua → PRD) — útil quando descoberta/visão/estratégia formais não são necessárias.
 
 ## Status
 
-`docs/agent/`, `docs/standards/` e `knowledge/` estão com conteúdo real preenchido. Em `src/`, todas as skills e os quatro workflows (descoberta, visão, estratégia, PRD) estão implementados e cobertos por testes (mocks de LLM, sem chamada real a Ollama/Jira/Confluence). Priorização (RICE/MoSCoW/Kano/WSJF), MVP scope formal e business case ficam para uma Fase 2 futura — deliberadamente fora do escopo desta primeira versão (ver `docs/agent/prd.md`, seção "Fora de escopo").
+`docs/agent/`, `docs/standards/` e `knowledge/` estão com conteúdo real preenchido. Em `src/`, todas as skills e os quatro workflows (descoberta, visão, estratégia, PRD) estão implementados e cobertos por testes (mocks de LLM, sem chamada real a Ollama/Jira/Confluence). Priorização MoSCoW/RICE/WSJF está implementada (`--priorizar`); priorização Kano é permanentemente fora de escopo (depende de dados de pesquisa de satisfação ausentes do tipo de entrada deste agente). MVP scope formal e business case ficam para uma Fase 2 futura — deliberadamente fora do escopo desta primeira versão (ver `docs/agent/prd.md`, seção "Fora de escopo").
 
 Este projeto tem repositório git próprio, independente do monorepo raiz (conforme a convenção "todo projeto novo recebe repositório separado" — ver `CLAUDE.md` raiz do workspace).
 

@@ -2,7 +2,7 @@
 
 > Documentação das skills implementadas em `../../src/aqua_qe_product_manager/skills/`, no formato definido em `../standards/skill_standard.md`. Ordem conforme `agent_manifest.yaml`.
 >
-> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions` e `refine_prd` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd`, `format_prd_markdown` e `parse_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação (`read_jira_issue`/`read_confluence_page` fazem chamada HTTP real ao Jira/Confluence Cloud via `services/jira_service.py`/`services/confluence_service.py`, não ao LLM). `create_confluence_page`/`update_confluence_page` também são I/O (chamada HTTP de escrita ao Confluence Cloud), sem LLM — as únicas skills deste agente que gravam em um sistema externo, e só são chamadas pelo CLI após aceitação humana explícita.
+> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions` e `refine_prd` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd`, `format_prd_markdown` e `parse_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação (`read_jira_issue`/`read_confluence_page` fazem chamada HTTP real ao Jira/Confluence Cloud via `services/jira_service.py`/`services/confluence_service.py`, não ao LLM). `create_confluence_page`/`update_confluence_page` também são I/O (chamada HTTP de escrita ao Confluence Cloud), sem LLM — as únicas skills deste agente que gravam em um sistema externo, e só são chamadas pelo CLI após aceitação humana explícita. `classify_moscow` usa o LLM gerador (categórica, segue GR-1). `validate_moscow_classification`, `compute_rice_score` e `compute_wsjf_score` são Python puro, sem LLM — os dois últimos nunca recebem um número estimado pelo agente (GR-M4).
 
 ## read_text_file
 
@@ -255,6 +255,42 @@
 - **Efeitos colaterais**: uma chamada HTTP `GET` (busca título/versão atuais) seguida de `PUT` ao Confluence Cloud.
 - **Erros esperados**: credencial ausente, página inexistente ou sem permissão (HTTP 4xx, propagado via `raise_for_status`).
 - **Dependências**: chamada pelo CLI (`run.py --atualizar-confluence`) só após aceitação humana explícita do artefato — mutuamente exclusivo com `--publicar-confluence` na mesma execução.
+
+## classify_moscow
+
+- **Descrição**: classifica cada requisito funcional do PRD aceito em MoSCoW (Must/Should/Could/Won't), com base exclusivamente em sinais de linguagem explícitos no texto de origem (ex.: "essencial" → must, "seria bom ter" → could). Nunca inventa uma categoria sem sinal claro — nesse caso, a categoria fica vazia (GR-M4/RULE-M3 tratam especificamente do risco numérico de RICE/WSJF; esta skill segue GR-1 normalmente, por ser categórica).
+- **Entrada**: `requisitos: list[str]`, `texto_fonte: str` (o PRD formatado completo).
+- **Saída**: `list[PrioritizedRequirement]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: consome `draft.functional_requirements` de um PRD já aceito.
+
+## validate_moscow_classification
+
+- **Descrição**: confere que a classificação devolvida corresponde 1:1 aos requisitos originais (mesmo texto, mesma ordem) e que toda categoria é uma das 4 válidas ou vazia. Se falhar, `workflow/prioritize_requirements.py` aplica o fallback seguro (todas as categorias vazias) em vez de propagar uma classificação inconsistente.
+- **Entrada**: `itens: list[PrioritizedRequirement]`, `requisitos_originais: list[str]`.
+- **Saída**: `bool`.
+- **Efeitos colaterais**: nenhum — Python puro, sem LLM.
+- **Erros esperados**: nenhum.
+- **Dependências**: consome a saída de `classify_moscow`.
+
+## compute_rice_score
+
+- **Descrição**: calcula o score RICE = (Reach × Impact × Confidence) / Effort. Puro Python — os quatro valores vêm sempre do usuário via `input()` no CLI, nunca estimados pelo agente (GR-M4).
+- **Entrada**: `reach: float`, `impact: float`, `confidence: float`, `effort: float`.
+- **Saída**: `float`.
+- **Efeitos colaterais**: nenhum.
+- **Erros esperados**: `ZeroDivisionError` se `effort` for zero (propagado, não capturado — o CLI já pede um número válido antes de chamar).
+- **Dependências**: chamada pelo CLI (`run.py --priorizar rice`) após coleta interativa dos valores.
+
+## compute_wsjf_score
+
+- **Descrição**: calcula o score WSJF = (Business Value + Time Criticality + Risk Reduction) / Job Size. Puro Python — os quatro valores vêm sempre do usuário via `input()` no CLI, nunca estimados pelo agente (GR-M4).
+- **Entrada**: `business_value: float`, `time_criticality: float`, `risk_reduction: float`, `job_size: float`.
+- **Saída**: `float`.
+- **Efeitos colaterais**: nenhum.
+- **Erros esperados**: `ZeroDivisionError` se `job_size` for zero (propagado, não capturado).
+- **Dependências**: chamada pelo CLI (`run.py --priorizar wsjf`) após coleta interativa dos valores.
 
 ## export_markdown
 

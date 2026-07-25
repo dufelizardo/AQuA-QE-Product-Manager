@@ -22,6 +22,7 @@ outputs:
   - product_vision
   - product_strategy
   - prd
+  - prioritized_requirements
   - markdown
 
 skills:
@@ -53,6 +54,10 @@ skills:
   - parse_prd_markdown
   - create_confluence_page
   - update_confluence_page
+  - classify_moscow
+  - validate_moscow_classification
+  - compute_rice_score
+  - compute_wsjf_score
   - export_markdown
 
 memory:

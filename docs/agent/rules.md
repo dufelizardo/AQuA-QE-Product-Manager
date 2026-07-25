@@ -26,6 +26,14 @@
 - **Severidade**: bloqueante.
 - **Origem**: GR-M2 (`guardrails.md`).
 
+## RULE-M3
+
+- **Descrição**: nunca estimar reach, impact, confidence, effort, business value, time criticality, risk reduction ou job size para calcular RICE/WSJF — esses valores só podem vir de entrada explícita do usuário.
+- **Gatilho**: `--priorizar rice`/`--priorizar wsjf`.
+- **Ação esperada**: coletar cada valor via prompt interativo no CLI; `compute_rice_score`/`compute_wsjf_score` só fazem o cálculo aritmético, nunca uma chamada ao LLM.
+- **Severidade**: bloqueante.
+- **Origem**: GR-M4 (`guardrails.md`).
+
 ## RULE-002
 
 - **Descrição**: todo artefato (visão, estratégia, PRD) deve ser validado pelo checklist automático correspondente antes de ser apresentado ao usuário.
@@ -68,4 +76,4 @@
 
 ## Resolução de conflitos
 
-RULE-001, RULE-M1, RULE-M2, RULE-002, RULE-004 e RULE-005 são bloqueantes e têm prioridade sobre RULE-006 e RULE-007 (recomendações). Nenhuma regra bloqueante pode ser contornada para acelerar a entrega.
+RULE-001, RULE-M1, RULE-M2, RULE-M3, RULE-002, RULE-004 e RULE-005 são bloqueantes e têm prioridade sobre RULE-006 e RULE-007 (recomendações). Nenhuma regra bloqueante pode ser contornada para acelerar a entrega.
