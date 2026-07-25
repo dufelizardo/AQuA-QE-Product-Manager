@@ -74,6 +74,7 @@ Skills sem LLM (Python puro, determinísticas):
 
 - `validate_product_vision`, `validate_product_strategy`, `validate_prd` — checklist estrutural.
 - `format_prd_markdown` — formata o PRD em Markdown, byte-compatível com a entrada esperada pelo Product Owner.
+- `parse_prd_markdown` — o inverso: reconstrói um `PRDDraft` a partir de um PRD `.md` já existente, preservando a redação original campo a campo (`--modo prd --prd-existente`), em vez de o LLM reescrever tudo do zero a partir do texto.
 - `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`/`format_chat_transcript`, `export_markdown` — I/O e normalização de entrada. `read_jira_issue`/`read_confluence_page` fazem chamada HTTP real (Jira/Confluence Cloud REST API), **apenas leitura** — nunca escrevem de volta.
 
 Skills com LLM gerador (`OLLAMA_MODEL`, padrão `mistral`):
@@ -120,7 +121,7 @@ Essa separação preserva a característica determinística/auditável de cada a
 - **Descoberta** (`--modo descoberta`) — sintetiza problem statement/personas/JTBD/mercado, sem ciclo de aceite formal (são insumos estruturados, não artefatos "aceitos" isoladamente).
 - **Visão** (`--modo visao`) — gera e refina a visão de produto até aceite humano.
 - **Estratégia** (`--modo estrategia`) — gera a visão internamente (mesma entrada como ideia) e, uma vez aceita, gera e refina a estratégia a partir dela.
-- **PRD** (`--modo prd`) — gera e refina o PRD isoladamente, sem descoberta/visão/estratégia prévias; comportamento equivalente ao `--modo prd` do Product Owner (ideia crua → PRD) — o caminho mais simples, preservado por compatibilidade.
+- **PRD** (`--modo prd`) — gera e refina o PRD isoladamente, sem descoberta/visão/estratégia prévias; comportamento equivalente ao `--modo prd` do Product Owner (ideia crua → PRD) — o caminho mais simples, preservado por compatibilidade. Com `--prd-existente <arquivo.md>`, pula a geração e carrega o PRD já pronto via `parse_prd_markdown`, indo direto para validação/revisão/refinamento — para refinar um PRD que já existe, não recriar um novo a partir dele.
 - **Completo** (`--modo completo`) — encadeia descoberta → visão → estratégia → PRD numa execução só, usando cada artefato aceito como contexto para o próximo, com aceite humano em cada etapa. O caminho recomendado para o handoff ao Product Owner.
 
 ## 9. Stack técnico

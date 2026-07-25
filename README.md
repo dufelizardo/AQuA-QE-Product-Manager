@@ -82,9 +82,14 @@ uv run python run.py --modo completo --arquivo idea.txt --refinar --saida prd.md
 # Input from a Jira Cloud ticket or a Confluence Cloud page
 uv run python run.py --modo completo --jira PROJ-123 --refinar --saida prd.md
 uv run python run.py --modo completo --confluence "https://your-site.atlassian.net/wiki/.../pages/163841/..." --refinar --saida prd.md
+
+# Refine an existing PRD .md (loads the original fields, doesn't rewrite from scratch)
+uv run python run.py --modo prd --prd-existente prd.md --refinar --saida prd.md
 ```
 
 `--saida` is optional in every mode that produces an artifact (without it, the result is only printed to the terminal). `--refinar` enables the interactive clarifying-questions/refinement cycle before acceptance — but acceptance itself is **always** explicitly asked, with or without this flag (see `docs/agent/acceptance_patterns.md`).
+
+`--prd-existente` only works with `--modo prd`: instead of generating a new PRD via LLM, it loads the given `.md` as a structured `PRDDraft` (`parse_prd_markdown`, no LLM), preserving the original wording field by field, and goes straight into the same validate/review/refine cycle — useful to resume an already-exported PRD without rewriting it from scratch.
 
 `--jira`/`--confluence` are read-only — they fetch the source text (ticket summary+description, or page title+body), but this agent never writes back to those systems; write-back and ticket/page creation stay exclusive to Product Owner.
 

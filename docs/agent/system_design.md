@@ -21,6 +21,8 @@ Entrada (.txt/Markdown/chat/Jira/Confluence)
    → (fora deste agente) AQuA-QE Product Owner consome o PRD via --modo lote --arquivo
 ```
 
+Caminho alternativo, só para PRD (`--modo prd --prd-existente arquivo.md`): `parse_prd_markdown` substitui `generate_prd` — carrega um PRD já pronto como `PRDDraft`, preservando a redação original campo a campo, e segue direto para `validate_prd → review_prd → [refine] → aceite`, sem reescrita não solicitada pelo LLM.
+
 ## Componentes
 
 - **Orquestrador/Agente** — decide a sequência de skills a chamar e quando interromper o fluxo por ambiguidade (ver `agent_design.md`). Implementado em `../../src/aqua_qe_product_manager/orchestrator/product_manager.py`.
@@ -46,7 +48,7 @@ Entrada (.txt/Markdown/chat/Jira/Confluence)
 - **Descoberta** — sintetiza problem statement/personas/JTBD/mercado, sem ciclo de aceite formal (são inputs estruturados, não artefatos "aceitos" isoladamente).
 - **Visão** — gera e refina a visão de produto até aceite humano.
 - **Estratégia** — gera e refina a estratégia de produto a partir da visão aceita.
-- **PRD** — gera e refina o PRD, o artefato terminal desta fase, pronto para o handoff ao AQuA-QE Product Owner.
+- **PRD** — gera e refina o PRD, o artefato terminal desta fase, pronto para o handoff ao AQuA-QE Product Owner. Com `--prd-existente`, carrega um PRD `.md` já pronto (`parse_prd_markdown`) em vez de gerar um novo, e aplica o mesmo ciclo de validação/revisão/refinamento a partir dele.
 - **Completo** — encadeia os quatro modos acima numa execução só, com aceite humano em cada etapa.
 
 ## Restrições técnicas

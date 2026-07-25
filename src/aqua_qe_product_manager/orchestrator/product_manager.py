@@ -7,7 +7,9 @@ from ..models import (
     ProductStrategy,
     ProductVision,
 )
-from ..workflow.generate_prd import generate_prd_draft
+from ..skills.parse_prd_markdown import parse_prd_markdown
+from ..skills.read_text_file import read_text_file
+from ..workflow.generate_prd import finalize_prd, generate_prd_draft
 from ..workflow.generate_problem_discovery import generate_problem_discovery
 from ..workflow.generate_product_strategy import generate_strategy_draft
 from ..workflow.generate_product_vision import generate_vision_draft
@@ -33,3 +35,9 @@ def handle_strategy(vision: ProductVision, contexto: dict | None = None) -> Prod
 def handle_prd(ideia: str, contexto: dict | None = None) -> PRDDraft:
     """Gera o PRD a partir de uma ideia e, opcionalmente, de descoberta/visão/estratégia já aceitas."""
     return generate_prd_draft(ideia, contexto)
+
+
+def handle_existing_prd(caminho: str) -> PRDDraft:
+    """Carrega um PRD existente (Markdown, conforme docs/standards/prd_standard.md) como PRDDraft, preservando a redação original campo a campo, e aplica o mesmo ciclo de validação/revisão do PRD gerado."""
+    draft = parse_prd_markdown(read_text_file(caminho))
+    return finalize_prd(draft)

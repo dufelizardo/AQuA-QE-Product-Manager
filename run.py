@@ -22,6 +22,7 @@ from aqua_qe_product_manager.models import (  # noqa: E402
 )
 from aqua_qe_product_manager.orchestrator.product_manager import (  # noqa: E402
     handle_discovery,
+    handle_existing_prd,
     handle_prd,
     handle_strategy,
     handle_vision,
@@ -254,12 +255,10 @@ def _ciclo_de_refinamento_prd(draft: PRDDraft) -> PRDDraft:
     return draft
 
 
-def _rodar_prd(
-    ideia: str, contexto: dict | None, saida: str | None, refinar: bool
+def _finalizar_prd_interativo(
+    draft: PRDDraft, saida: str | None, refinar: bool
 ) -> str | None:
-    """Gera o PRD; retorna o texto formatado se aceito, ou None."""
-    draft = handle_prd(ideia, contexto)
-    print("\n--- PRD ---")
+    """Ciclo de refinamento/aceite/exportação compartilhado, independente de o PRD ter sido gerado ou carregado de um arquivo existente."""
     _imprimir_prd(draft)
 
     if refinar:
@@ -276,6 +275,22 @@ def _rodar_prd(
         print(f"exportado para: {saida}")
 
     return texto_final
+
+
+def _rodar_prd(
+    ideia: str, contexto: dict | None, saida: str | None, refinar: bool
+) -> str | None:
+    """Gera o PRD; retorna o texto formatado se aceito, ou None."""
+    draft = handle_prd(ideia, contexto)
+    print("\n--- PRD ---")
+    return _finalizar_prd_interativo(draft, saida, refinar)
+
+
+def _rodar_prd_existente(caminho: str, saida: str | None, refinar: bool) -> str | None:
+    """Carrega um PRD existente e aplica o mesmo ciclo de validação/revisão/refinamento/aceite, preservando a redação original nos campos que o refinamento não tocar."""
+    draft = handle_existing_prd(caminho)
+    print("\n--- PRD carregado de arquivo existente ---")
+    return _finalizar_prd_interativo(draft, saida, refinar)
 
 
 # --- Exportação isolada de visão/estratégia -------------------------------
@@ -351,12 +366,22 @@ def main() -> None:
         choices=["descoberta", "visao", "estrategia", "prd", "completo"],
         default="prd",
     )
-    entrada = parser.add_mutually_exclusive_group(required=True)
+    entrada = parser.add_mutually_exclusive_group()
     entrada.add_argument("--arquivo", help="Caminho de um arquivo .txt/.md de entrada.")
     entrada.add_argument("--texto", help="Texto de entrada direto (chat).")
     entrada.add_argument("--jira", help="Chave do ticket Jira (ex.: PROJ-123).")
     entrada.add_argument(
         "--confluence", help="URL completa ou ID de uma página do Confluence Cloud."
+    )
+    entrada.add_argument(
+        "--prd-existente",
+        dest="prd_existente",
+        help=(
+            "Caminho de um PRD .md já existente (mesmo formato de "
+            "format_prd_markdown) para carregar como PRDDraft estruturado e "
+            "refinar, em vez de gerar um PRD novo do zero. Só válido com "
+            "--modo prd."
+        ),
     )
     parser.add_argument(
         "--saida",
@@ -372,6 +397,18 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+
+    if not any([args.arquivo, args.texto, args.jira, args.confluence, args.prd_existente]):
+        parser.error(
+            "informe exatamente uma entrada: --arquivo, --texto, --jira, "
+            "--confluence ou --prd-existente."
+        )
+    if args.prd_existente and args.modo != "prd":
+        parser.error("--prd-existente só é válido com --modo prd.")
+
+    if args.prd_existente:
+        _rodar_prd_existente(args.prd_existente, args.saida, args.refinar)
+        return
 
     texto = _ler_entrada(args)
 

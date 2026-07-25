@@ -74,6 +74,7 @@ Skills with no LLM (pure Python, deterministic):
 
 - `validate_product_vision`, `validate_product_strategy`, `validate_prd` — structural checklist.
 - `format_prd_markdown` — formats the PRD as Markdown, byte-compatible with the input Product Owner expects.
+- `parse_prd_markdown` — the inverse: reconstructs a `PRDDraft` from an already-existing PRD `.md`, preserving the original wording field by field (`--modo prd --prd-existente`), instead of the LLM rewriting everything from scratch based on the text.
 - `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`/`format_chat_transcript`, `export_markdown` — input I/O and normalization. `read_jira_issue`/`read_confluence_page` make a real HTTP call (Jira/Confluence Cloud REST API), **read-only** — never writing back.
 
 Skills with a generator LLM (`OLLAMA_MODEL`, default `mistral`):
@@ -120,7 +121,7 @@ This separation preserves each agent's deterministic/auditable nature — neithe
 - **Discovery** (`--modo descoberta`) — synthesizes problem statement/personas/JTBD/market, with no formal acceptance cycle (these are structured inputs, not standalone "accepted" artifacts).
 - **Vision** (`--modo visao`) — generates and refines the product vision until human acceptance.
 - **Strategy** (`--modo estrategia`) — generates the vision internally (same input used as the idea) and, once accepted, generates and refines the strategy from it.
-- **PRD** (`--modo prd`) — generates and refines the PRD in isolation, with no prior discovery/vision/strategy; behavior equivalent to Product Owner's own `--modo prd` (raw idea → PRD) — the simplest path, preserved for compatibility.
+- **PRD** (`--modo prd`) — generates and refines the PRD in isolation, with no prior discovery/vision/strategy; behavior equivalent to Product Owner's own `--modo prd` (raw idea → PRD) — the simplest path, preserved for compatibility. With `--prd-existente <file.md>`, it skips generation and loads the already-written PRD via `parse_prd_markdown`, going straight into validation/review/refinement — to refine an existing PRD, not recreate a new one from it.
 - **Complete** (`--modo completo`) — chains discovery → vision → strategy → PRD in a single run, using each accepted artifact as context for the next, with human acceptance at every step. The recommended path for the Product Owner handoff.
 
 ## 9. Technical stack

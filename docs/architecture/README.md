@@ -17,6 +17,8 @@ Da entrada (`.txt`/Markdown/chat/Jira/Confluence) até o Ollama local (e, para l
 
 Os três artefatos com ciclo de aceite formal (Visão, Estratégia, PRD) seguem exatamente o mesmo pipeline: `Generate → Validate → Review → [Refine] → Approve`, com os dois pontos de checagem (checklist automático e revisor independente) antes de qualquer aceite humano. Só o PRD, ao final, é formatado e exportado — Visão e Estratégia aceitas viram *contexto* para a etapa seguinte. Detalhe textual em `../agent/system_design.md` e `../agent/acceptance_patterns.md`.
 
+Caso especial só para PRD (`--prd-existente`): a etapa `Generate` é substituída por `parse_prd_markdown` — carrega um PRD `.md` já pronto como `PRDDraft`, preservando a redação original campo a campo, e entra direto em `Validate`. Sem diagrama próprio; é o mesmo pipeline com a primeira etapa trocada.
+
 ## 3 — Fluxo de descoberta
 
 ![Fluxo de descoberta](svg/03-fluxo-descoberta.svg)

@@ -69,3 +69,30 @@ def test_handle_prd_delegates_to_workflow(monkeypatch):
     assert resultado == "prd-fake"
     assert chamada["ideia"] == "uma ideia"
     assert chamada["contexto"] == {"chave": "valor"}
+
+
+def test_handle_existing_prd_le_parseia_e_finaliza(monkeypatch):
+    chamada = {}
+
+    def fake_read_text_file(caminho):
+        chamada["caminho"] = caminho
+        return "# PRD"
+
+    def fake_parse_prd_markdown(texto):
+        chamada["texto_parseado"] = texto
+        return "draft-parseado"
+
+    def fake_finalize_prd(draft):
+        chamada["draft_finalizado"] = draft
+        return "prd-finalizado"
+
+    monkeypatch.setattr(product_manager, "read_text_file", fake_read_text_file)
+    monkeypatch.setattr(product_manager, "parse_prd_markdown", fake_parse_prd_markdown)
+    monkeypatch.setattr(product_manager, "finalize_prd", fake_finalize_prd)
+
+    resultado = product_manager.handle_existing_prd("prd.md")
+
+    assert resultado == "prd-finalizado"
+    assert chamada["caminho"] == "prd.md"
+    assert chamada["texto_parseado"] == "# PRD"
+    assert chamada["draft_finalizado"] == "draft-parseado"

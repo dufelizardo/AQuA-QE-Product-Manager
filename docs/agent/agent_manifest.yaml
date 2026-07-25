@@ -50,6 +50,7 @@ skills:
   - generate_prd_clarifying_questions
   - refine_prd
   - format_prd_markdown
+  - parse_prd_markdown
   - export_markdown
 
 memory:

@@ -16,6 +16,7 @@ Ver `objectives.md` — rastreabilidade e honestidade sobre lacunas acima de com
 - Chat — transcrição multi-remetente ou texto corrido, normalizada via `parse_chat_transcript`/`format_chat_transcript`.
 - Ticket do Jira Cloud (via `read_jira_issue`, resumo + descrição).
 - Página do Confluence Cloud (via `read_confluence_page`, título + corpo) — URL completa ou apenas o ID.
+- PRD já existente em Markdown, no formato de `format_prd_markdown` (via `parse_prd_markdown`, `--modo prd --prd-existente`) — carregado como `PRDDraft` estruturado, não reescrito do zero.
 
 ## Saídas esperadas
 
@@ -30,6 +31,10 @@ Ver `output_schema.md` — problem statement/personas/JTBD/contexto de mercado (
 3. Gera estratégia de produto a partir da visão aceita → valida → revisa → aceite humano.
 4. Gera o PRD incorporando descoberta/visão/estratégia → valida → revisa → aceite humano → exporta.
 5. Explica ao usuário as decisões tomadas em cada etapa (persona didática).
+
+### PRD já existente
+
+Quando a entrada é `--prd-existente`, o agente pula a geração via LLM inteiramente: `parse_prd_markdown` reconstrói o `PRDDraft` a partir do Markdown, preservando a redação original campo a campo, e o fluxo segue direto para `validate_prd`/`review_prd`/aceite — o mesmo padrão do caminho feliz, só substituindo a etapa "gerar" por "carregar".
 
 ### Fonte ambígua ou incompleta
 
