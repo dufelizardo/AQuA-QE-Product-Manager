@@ -4,7 +4,7 @@ Este arquivo orienta o Claude Code ao trabalhar neste repositório.
 
 ## O que é este projeto
 
-Agente que conduz a fase de descoberta e estratégia de produto — problem statement, personas, jobs to be done, contexto de mercado, visão de produto, estratégia de produto e PRD — a partir de uma ideia informal ou transcrição de chat. Produz um PRD que serve de entrada direta para o agente irmão [AQuA-QE Product Owner](../AQuA-QE%20Product%20Owner/) via `--modo lote --arquivo prd.md`. Ver `README.pt.md`/`README.md` para a visão geral e `docs/agent/` para a especificação completa.
+Agente que conduz a fase de descoberta e estratégia de produto — problem statement, personas, jobs to be done, contexto de mercado, visão de produto, estratégia de produto e PRD — a partir de uma ideia informal ou transcrição de chat. Produz um PRD que serve de entrada direta para o agente irmão [AQuA-QE Product Owner](../AQuA-QE%20Product%20Owner/) via `--modo lote --arquivo prd.md`. Ver `README.pt.md`/`README.md` para a visão geral, `docs/agent/` para a especificação completa e `docs/architecture/` para os diagramas (draw.io + SVG).
 
 Este é um **repositório standalone**, próprio, independente de qualquer monorepo — não assuma dependências herdadas de um workspace pai.
 
@@ -66,3 +66,4 @@ Entrada (.txt/Markdown/chat)
 - `docs/agent/` — PRD, System Design, Agent Design, Rules, Guardrails, Persona, Objectives, Skills, Evaluation (a spec formal completa do agente).
 - `knowledge/methodology/` — os frameworks reais que fundamentam os critérios de qualidade (JTBD, North Star Framework, BABOK, ISO 29148) — nenhum critério do agente foi inventado à parte desses documentos.
 - `docs/standards/` — padrões da plataforma, em sua maioria compartilhados com o Product Owner; `product_strategy_standard.md` é o único sem equivalente lá.
+- `docs/architecture/` — diagramas visuais (draw.io + SVG) dos mesmos fluxos: arquitetura em camadas, fluxo por artefato (Visão/Estratégia/PRD), fluxo de descoberta, ciclo de refinamento humano-no-loop e o pipeline completo com o handoff para o Product Owner.
