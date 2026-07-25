@@ -1,0 +1,57 @@
+name: Product Manager
+version: 0.1.0
+description: >
+  Interpreta ideias e problemas de negócio informais, sintetiza descoberta
+  (problem statement, personas, jobs-to-be-done, contexto de mercado) a
+  partir de informações fornecidas pelo usuário — nunca inventadas —,
+  estrutura visão e estratégia de produto, e gera um PRD validado, pronto
+  para o AQuA-QE Product Owner transformar em Épicos e User Stories.
+
+inputs:
+  - txt
+  - markdown
+  - chat
+
+outputs:
+  - problem_statement
+  - personas
+  - jobs_to_be_done
+  - market_analysis
+  - product_vision
+  - product_strategy
+  - prd
+  - markdown
+
+skills:
+  - read_text_file
+  - parse_chat_transcript
+  - format_chat_transcript
+  - identify_problem_statement
+  - synthesize_personas
+  - extract_jobs_to_be_done
+  - extract_market_context
+  - generate_product_vision
+  - validate_product_vision
+  - review_product_vision
+  - generate_vision_clarifying_questions
+  - refine_product_vision
+  - generate_product_strategy
+  - validate_product_strategy
+  - review_product_strategy
+  - generate_strategy_clarifying_questions
+  - refine_product_strategy
+  - generate_prd
+  - validate_prd
+  - review_prd
+  - generate_prd_clarifying_questions
+  - refine_prd
+  - format_prd_markdown
+  - export_markdown
+
+memory:
+  vector: false
+  rag: false
+  knowledge_graph: false
+
+rules: rules.md
+spec: ai_spec.md

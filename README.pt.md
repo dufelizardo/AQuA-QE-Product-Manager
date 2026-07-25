@@ -1,0 +1,95 @@
+# AQuA-QE Product Manager
+
+> Também disponível em [English](README.md).
+
+Agente que conduz a fase de descoberta e estratégia de produto — problem statement, personas, jobs to be done, contexto de mercado, visão de produto, estratégia de produto e PRD — a partir de uma ideia informal ou transcrição de chat, seguindo o mesmo fluxo de engenharia de agentes do seu agente irmão, o [AQuA-QE Product Owner](https://github.com/dufelizardo/AQuA-QE-Product-Owner):
+
+```
+PRD → System Design → Agent Design → AI Specs/Rules/Skills → Context Engineering → Memory/MCP → Agents → Outputs
+```
+
+## Relação com o AQuA-QE Product Owner
+
+Este agente e o AQuA-QE Product Owner são **independentes** — repositórios separados, sem runtime compartilhado, sem chamada direta entre um e outro. O Product Manager cobre a parte de **estratégia** (o quê construir e por quê, antes de qualquer requisito existir); o Product Owner cobre a parte de **execução** (transformar um PRD em Epics/User Stories/Critérios de Aceitação). A ponte entre os dois é um artefato de texto: o PRD gerado e aceito aqui é exportado em Markdown e consumido pelo Product Owner como uma entrada normal:
+
+```bash
+# Neste projeto: gera e exporta o PRD
+uv run python run.py --modo prd --texto "Clientes precisam conseguir contratar CDB pelo app" --refinar --saida prd.md
+
+# No repositório do AQuA-QE Product Owner: consome o PRD, pulando o próprio --modo prd
+# (já que este agente roda seu próprio ciclo validate/review/refine)
+uv run python run.py --modo lote --arquivo prd.md --saida saida_epic/
+```
+
+Nenhuma mudança é necessária no código do Product Owner — ele já aceita arquivo `.md` como entrada.
+
+## Estrutura
+
+- **`docs/standards/`** — padrões da plataforma (como escrever um AI Spec, uma Rule, um PRD, uma Visão/Estratégia de produto, etc.). Mudam pouco; a maior parte é compartilhada com o Product Owner.
+- **`docs/agent/`** — especificação completa deste agente: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt e o `agent_manifest.yaml`.
+- **`knowledge/methodology/`** — material metodológico que orienta o agente (JTBD, North Star Framework, BABOK, ISO 29148).
+- **`knowledge/templates/`** — estrutura pura, sem conhecimento (templates de Problem Statement, Persona, Visão de Produto, Estratégia de Produto, PRD).
+- **`src/aqua_qe_product_manager/skills/`** — 24 skills do agente em Python (ler arquivo de texto, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar o PRD, exportar em Markdown).
+- **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner).
+- **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
+- **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
+- **`src/aqua_qe_product_manager/services/`** — integração externa: `llm_service` (Ollama local). Sem RAG/Jira/Confluence nesta fase.
+
+## Configuração
+
+Este é um repositório independente (não faz parte de nenhum monorepo) — o `uv sync` aqui resolve e instala suas próprias dependências.
+
+1. Instale [Python 3.12+](https://www.python.org/) e [uv](https://docs.astral.sh/uv/).
+2. Instale o [Ollama](https://ollama.com) e baixe os dois modelos locais usados por este agente:
+   ```bash
+   ollama pull mistral   # geração
+   ollama pull phi4      # revisor independente
+   ```
+3. Clone este repositório e instale as dependências:
+   ```bash
+   git clone https://github.com/dufelizardo/AQuA-QE-Product-Manager.git
+   cd AQuA-QE-Product-Manager
+   uv sync
+   ```
+4. Copie `.env.example` para `.env` (os padrões já funcionam com uma instalação local do Ollama):
+   ```bash
+   cp .env.example .env
+   ```
+5. Rode a suíte de testes (totalmente mockada, sem chamadas reais a Ollama) para confirmar a configuração:
+   ```bash
+   uv run pytest
+   ```
+
+## Uso
+
+```bash
+# Descoberta isolada (problem statement, personas, JTBD, mercado) — sem ciclo de aceite formal
+uv run python run.py --modo descoberta --texto "Gestores de unidade perdem tempo consolidando relatórios manualmente"
+
+# Visão de produto a partir de uma ideia, com ciclo interativo de refinamento
+uv run python run.py --modo visao --texto "Um app de consolidação automática de relatórios" --refinar --saida visao.md
+
+# Estratégia de produto (gera a visão internamente e, uma vez aceita, a estratégia)
+uv run python run.py --modo estrategia --arquivo ideia.txt --refinar --saida estrategia.md
+
+# PRD a partir de uma ideia crua, sem descoberta/visão/estratégia prévias — caminho mais simples
+uv run python run.py --modo prd --texto "Clientes precisam conseguir contratar CDB pelo app" --refinar --saida prd.md
+
+# Pipeline completo — descoberta -> visão -> estratégia -> PRD, com aceite humano em cada etapa
+uv run python run.py --modo completo --arquivo ideia.txt --refinar --saida prd.md
+```
+
+`--saida` é opcional em todos os modos que produzem artefato (sem ela, o resultado só é impresso no terminal). `--refinar` ativa o ciclo interativo de perguntas/refinamento antes do aceite — mas o aceite em si é **sempre** perguntado explicitamente, com ou sem essa flag (ver `docs/agent/acceptance_patterns.md`).
+
+O modo `completo` é o caminho recomendado para o handoff ao Product Owner: encadeia descoberta, visão, estratégia e PRD numa execução só, usando cada artefato aceito como contexto para o próximo, e produz um único `prd.md` pronto para `--modo lote --arquivo prd.md` no Product Owner. O modo `prd` isolado, sem contexto prévio, se comporta como o `--modo prd` do Product Owner (ideia crua → PRD) — útil quando descoberta/visão/estratégia formais não são necessárias.
+
+## Status
+
+`docs/agent/`, `docs/standards/` e `knowledge/` estão com conteúdo real preenchido. Em `src/`, as 24 skills e os quatro workflows (descoberta, visão, estratégia, PRD) estão implementados e cobertos por testes (mocks de LLM, sem chamada real a Ollama). Priorização (RICE/MoSCoW/Kano/WSJF), MVP scope formal e business case ficam para uma Fase 2 futura — deliberadamente fora do escopo desta primeira versão (ver `docs/agent/prd.md`, seção "Fora de escopo").
+
+Este projeto tem repositório git próprio, independente do monorepo raiz (conforme a convenção "todo projeto novo recebe repositório separado" — ver `CLAUDE.md` raiz do workspace).
+
+---
+
+**Eduardo Felizardo Cândido**
+Senior QA Automation Engineer | AI-driven Testing | Robot Framework & Python
