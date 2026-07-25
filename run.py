@@ -41,6 +41,8 @@ from aqua_qe_product_manager.skills.generate_vision_clarifying_questions import 
     generate_vision_clarifying_questions,
 )
 from aqua_qe_product_manager.skills.parse_chat_transcript import parse_chat_transcript  # noqa: E402
+from aqua_qe_product_manager.skills.read_confluence_page import read_confluence_page  # noqa: E402
+from aqua_qe_product_manager.skills.read_jira_issue import read_jira_issue  # noqa: E402
 from aqua_qe_product_manager.skills.read_text_file import read_text_file  # noqa: E402
 from aqua_qe_product_manager.workflow.generate_prd import refine_prd_draft  # noqa: E402
 from aqua_qe_product_manager.workflow.generate_product_strategy import (  # noqa: E402
@@ -54,6 +56,10 @@ from aqua_qe_product_manager.workflow.generate_product_vision import (  # noqa: 
 def _ler_entrada(args: argparse.Namespace) -> str:
     if args.arquivo:
         return read_text_file(args.arquivo)
+    if args.jira:
+        return read_jira_issue(args.jira)
+    if args.confluence:
+        return read_confluence_page(args.confluence)
     # chat (--texto): normaliza a transcrição (remetente por linha), quando houver;
     # texto corrido sem remetentes volta inalterado (ver parse_chat_transcript).
     return format_chat_transcript(parse_chat_transcript(args.texto))
@@ -348,6 +354,10 @@ def main() -> None:
     entrada = parser.add_mutually_exclusive_group(required=True)
     entrada.add_argument("--arquivo", help="Caminho de um arquivo .txt/.md de entrada.")
     entrada.add_argument("--texto", help="Texto de entrada direto (chat).")
+    entrada.add_argument("--jira", help="Chave do ticket Jira (ex.: PROJ-123).")
+    entrada.add_argument(
+        "--confluence", help="URL completa ou ID de uma página do Confluence Cloud."
+    )
     parser.add_argument(
         "--saida",
         help="Caminho do .md exportado (modos visao/estrategia/prd/completo, após aceite).",

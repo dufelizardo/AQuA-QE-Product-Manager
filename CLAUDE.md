@@ -14,7 +14,7 @@ Este é um **repositório standalone**, próprio, independente de qualquer monor
 # Instalar/sincronizar dependências
 uv sync
 
-# Rodar toda a suíte de testes (mockada, sem chamadas reais a Ollama)
+# Rodar toda a suíte de testes (mockada, sem chamadas reais a Ollama/Jira/Confluence)
 uv run pytest
 
 # Rodar um teste único
@@ -39,7 +39,7 @@ Ver a seção "Setup"/"Configuração" em `README.md`/`README.pt.md`: requer Pyt
 ## Arquitetura (resumo — detalhe completo em `docs/agent/system_design.md`)
 
 ```
-Entrada (.txt/Markdown/chat)
+Entrada (.txt/Markdown/chat/Jira/Confluence)
   → CLI (run.py) → orchestrator/product_manager.py → workflow/* → skills/* → models/* → services/*
 ```
 
@@ -47,7 +47,7 @@ Entrada (.txt/Markdown/chat)
 - `src/aqua_qe_product_manager/skills/` — 24 funções de responsabilidade única (ver `docs/agent/skills.md`).
 - `src/aqua_qe_product_manager/workflow/` — orquestra a sequência de skills por artefato (`generate_problem_discovery`, `generate_product_vision`, `generate_product_strategy`, `generate_prd`).
 - `src/aqua_qe_product_manager/orchestrator/product_manager.py` — `handle_discovery`/`handle_vision`/`handle_strategy`/`handle_prd`, um por modo.
-- `src/aqua_qe_product_manager/services/` — integração externa: `llm_service` (Ollama). Sem RAG/Jira/Confluence nesta fase.
+- `src/aqua_qe_product_manager/services/` — integrações externas: `llm_service` (Ollama), `jira_service`/`confluence_service` (Jira Cloud/Confluence Cloud REST API + httpx, **apenas leitura**). Sem RAG nesta fase.
 
 ## Convenções críticas
 
@@ -56,7 +56,8 @@ Entrada (.txt/Markdown/chat)
 - **Sem aprovação automática** (cobre Visão/Estratégia/PRD): nenhuma skill/workflow define `ArtifactStatus.ACCEPTED`. Esse status só é atribuído pelo CLI (`run.py`), após confirmação humana explícita no terminal — sempre pedida, com ou sem `--refinar`.
 - **Toda saída de LLM gerador/revisor é sempre em português**, por design, independentemente do idioma da fonte de entrada — instrução explícita e hardcoded nos prompts de geração/refinamento. Não é um comportamento adaptativo por idioma da entrada.
 - **Dois LLMs sempre diferentes**: `OLLAMA_MODEL` (padrão `mistral`) gera; `OLLAMA_REVIEW_MODEL` (padrão `phi4`) revisa. É deliberado — mitiga *self-preference bias* de um modelo aprovar a própria saída.
-- **Testes sempre mockam** Ollama — nenhum teste em `tests/` faz chamada real de rede. Ao adicionar um teste para uma skill/service novo, siga esse padrão.
+- **Testes sempre mockam** Ollama/Jira/Confluence — nenhum teste em `tests/` faz chamada real de rede. Ao adicionar um teste para uma skill/service novo, siga esse padrão.
+- **`--jira`/`--confluence` são apenas leitura**: `read_jira_issue`/`read_confluence_page` buscam texto de origem, nunca escrevem de volta — escrita/criação de ticket/página continua exclusiva do AQuA-QE Product Owner.
 - **PRD é o único artefato de handoff** para o AQuA-QE Product Owner — `format_prd_markdown` produz Markdown byte-compatível com o que o Product Owner já sabe interpretar via `--modo lote --arquivo`. Visão e Estratégia, quando exportadas, seguem `knowledge/templates/product_vision.md`/`product_strategy.md`, mas não são consumidas pelo Product Owner.
 - **Priorização (RICE/MoSCoW/Kano/WSJF), MVP scope formal e business case** foram avaliados e deliberadamente adiados para uma Fase 2 futura — não implementar especulativamente; ver `docs/agent/prd.md`, seção "Fora de escopo".
 - **Sem RAG/embeddings nesta fase** — `knowledge/methodology/` é pequeno o suficiente para caber direto no prompt de cada skill (ver `docs/agent/context_engineering.md`).

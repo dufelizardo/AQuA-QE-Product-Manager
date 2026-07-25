@@ -7,8 +7,8 @@
 O agente é um pipeline de skills orquestrado sequencialmente, com dois pontos de checagem antes de qualquer saída ser considerada válida: validação automática (checklist Python puro) e revisão humana obrigatória. Não há aprovação automática — ver `guardrails.md`.
 
 ```
-Entrada (.txt/Markdown/chat)
-   → read_text_file / parse_chat_transcript+format_chat_transcript (chat)
+Entrada (.txt/Markdown/chat/Jira/Confluence)
+   → read_text_file / parse_chat_transcript+format_chat_transcript (chat) / read_jira_issue / read_confluence_page
    → identify_problem_statement / synthesize_personas / extract_jobs_to_be_done / extract_market_context (descoberta, opcional)
    → generate_product_vision → validate_product_vision → review_product_vision
       → [se reprovado] generate_vision_clarifying_questions → resposta humana → refine_product_vision → revalidar
@@ -28,11 +28,12 @@ Entrada (.txt/Markdown/chat)
 - **Skills** — funções descritas em `skills.md`, implementadas em `../../src/aqua_qe_product_manager/skills/`.
 - **Modelos de dados** — estruturas (`ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft`) implementadas em `../../src/aqua_qe_product_manager/models/`, conforme `output_schema.md`.
 - **Fontes de conhecimento** — `knowledge/methodology/` (JTBD, North Star Framework), consumidas diretamente pelos prompts das skills (sem RAG nesta fase — volume pequeno o suficiente para caber direto no contexto, ver `context_engineering.md`).
-- **Interfaces externas** — entrada: arquivo `.txt`/Markdown ou texto de chat; saída: arquivo Markdown exportado (`export_markdown`/`format_prd_markdown`), consumido pelo AQuA-QE Product Owner como entrada normal.
+- **Integrações externas de leitura** — `services/jira_service.py` e `services/confluence_service.py` (Jira Cloud e Confluence Cloud REST API, mesmas credenciais); apenas leitura — escrita/criação de tickets e páginas continua exclusiva do AQuA-QE Product Owner.
+- **Interfaces externas** — entrada: arquivo `.txt`/Markdown, texto de chat, ticket Jira Cloud ou página Confluence Cloud; saída: arquivo Markdown exportado (`export_markdown`/`format_prd_markdown`), consumido pelo AQuA-QE Product Owner como entrada normal.
 
 ## Fluxo de dados
 
-1. A entrada é normalizada em texto (`read_text_file` para arquivo; `parse_chat_transcript`/`format_chat_transcript` para chat).
+1. A entrada é normalizada em texto (`read_text_file` para arquivo; `parse_chat_transcript`/`format_chat_transcript` para chat; `read_jira_issue`/`read_confluence_page` para Jira/Confluence — apenas leitura, este agente nunca escreve de volta nesses sistemas).
 2. Descoberta é sintetizada quando o texto contiver informação suficiente (`identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`) — cada uma pode retornar vazia sem bloquear o restante do pipeline.
 3. Visão de produto é gerada, validada, revisada e (se necessário) refinada com respostas do usuário, até aceite humano explícito.
 4. Estratégia de produto é gerada a partir da visão aceita, mesmo ciclo.

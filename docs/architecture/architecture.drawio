@@ -10,13 +10,19 @@
           <mxGeometry x="40" y="40" width="920" height="90" as="geometry" />
         </mxCell>
         <mxCell id="ent1" value="txt" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="24.0" y="35" width="280.0" height="40" as="geometry" />
+          <mxGeometry x="24.0" y="35" width="161.6" height="40" as="geometry" />
         </mxCell>
         <mxCell id="ent2" value="markdown" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="320.0" y="35" width="280.0" height="40" as="geometry" />
+          <mxGeometry x="201.6" y="35" width="161.6" height="40" as="geometry" />
         </mxCell>
         <mxCell id="ent3" value="chat" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="616.0" y="35" width="280.0" height="40" as="geometry" />
+          <mxGeometry x="379.2" y="35" width="161.6" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ent4" value="jira" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="556.8" y="35" width="161.6" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ent5" value="confluence" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="734.4" y="35" width="161.6" height="40" as="geometry" />
         </mxCell>
         <mxCell id="bandCLI" value="CLI" style="rounded=0;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;verticalAlign=top;fontStyle=1;container=1;collapsible=0;;" vertex="1" parent="1">
           <mxGeometry x="40" y="150" width="920" height="70" as="geometry" />
@@ -48,7 +54,7 @@
         <mxCell id="bandSkills" value="Skills" style="rounded=0;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;verticalAlign=top;fontStyle=1;container=1;collapsible=0;;" vertex="1" parent="1">
           <mxGeometry x="40" y="450" width="920" height="210" as="geometry" />
         </mxCell>
-        <mxCell id="sk1" value="Sem LLM&#10;validate_product_vision,&#10;validate_product_strategy,&#10;validate_prd,&#10;format_prd_markdown,&#10;read_text_file,&#10;parse/format_chat_transcript,&#10;export_markdown" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="sk1" value="Sem LLM&#10;validate_product_vision,&#10;validate_product_strategy,&#10;validate_prd,&#10;format_prd_markdown,&#10;read_text_file,&#10;read_jira_issue,&#10;read_confluence_page,&#10;parse/format_chat_transcript,&#10;export_markdown" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
           <mxGeometry x="24" y="32" width="280" height="168" as="geometry" />
         </mxCell>
         <mxCell id="sk2" value="LLM gerador (mistral)&#10;identify_problem_statement,&#10;synthesize_personas,&#10;extract_jobs_to_be_done,&#10;extract_market_context,&#10;generate/refine_product_vision,&#10;generate/refine_product_strategy,&#10;generate/refine_prd,&#10;generate_*_clarifying_questions" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
@@ -88,13 +94,25 @@
           <mxGeometry x="40" y="790" width="920" height="90" as="geometry" />
         </mxCell>
         <mxCell id="svc1" value="llm_service" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="372" y="35" width="176" height="40" as="geometry" />
+          <mxGeometry x="24.0" y="35" width="280.0" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="svc2" value="jira_service" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="320.0" y="35" width="280.0" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="svc3" value="confluence_service" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="616.0" y="35" width="280.0" height="40" as="geometry" />
         </mxCell>
         <mxCell id="bandExternos" value="Sistemas externos" style="rounded=0;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;verticalAlign=top;fontStyle=1;container=1;collapsible=0;;" vertex="1" parent="1">
           <mxGeometry x="40" y="900" width="920" height="110" as="geometry" />
         </mxCell>
         <mxCell id="ext1" value="Ollama local&#10;(mistral, phi4)" style="rounded=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="372" y="35" width="176" height="60" as="geometry" />
+          <mxGeometry x="24" y="35" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ext2" value="Jira Cloud&#10;(REST API v3, leitura)" style="rounded=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="320" y="35" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ext3" value="Confluence Cloud&#10;(REST API v1, leitura)" style="rounded=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="616" y="35" width="280" height="60" as="geometry" />
         </mxCell>
 
         <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="bandEntrada" target="bandCLI"><mxGeometry relative="1" as="geometry" /></mxCell>
@@ -186,11 +204,11 @@
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <mxCell id="de_n1" value="Entrada&#10;(.txt/Markdown/chat)" style="ellipse;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="de_n1" value="Entrada&#10;(.txt/Markdown/chat/Jira/Confluence)" style="ellipse;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="400" y="40" width="350" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="de_n2" value="read_text_file /&#10;parse_chat_transcript+format_chat_transcript" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="400" y="120" width="350" height="50" as="geometry" />
+        <mxCell id="de_n2" value="read_text_file / read_jira_issue /&#10;read_confluence_page /&#10;parse_chat_transcript+format_chat_transcript" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="400" y="120" width="350" height="70" as="geometry" />
         </mxCell>
         <mxCell id="de_n3" value="identify_problem_statement&#10;(LLM gerador - mistral)" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="60" y="220" width="260" height="60" as="geometry" />

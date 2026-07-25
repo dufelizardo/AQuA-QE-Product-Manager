@@ -9,7 +9,7 @@ Representação visual da arquitetura e dos fluxos do agente, complementando a d
 
 ![Arquitetura em camadas](svg/01-arquitetura-camadas.svg)
 
-Da entrada (`.txt`/Markdown/chat) até o Ollama local, passando por CLI, orquestrador, workflows, skills, models e services. Detalhe textual em `../agent/system_design.md`.
+Da entrada (`.txt`/Markdown/chat/Jira/Confluence) até o Ollama local (e, para leitura, Jira/Confluence Cloud), passando por CLI, orquestrador, workflows, skills, models e services. Detalhe textual em `../agent/system_design.md`.
 
 ## 2 — Fluxo por artefato (Visão, Estratégia ou PRD)
 

@@ -44,8 +44,8 @@ GR-M1/GR-M2/GR-M3 são o que distingue este agente do Product Owner: GR-1 proteg
 ## 4. Arquitetura
 
 ```
-Entrada (.txt/Markdown/chat)
-   → read_text_file / parse_chat_transcript+format_chat_transcript (só chat)
+Entrada (.txt/Markdown/chat/Jira/Confluence)
+   → read_text_file / parse_chat_transcript+format_chat_transcript (só chat) / read_jira_issue / read_confluence_page (só leitura)
    → identify_problem_statement / synthesize_personas / extract_jobs_to_be_done / extract_market_context (descoberta, opcional)
    → generate_product_vision  (LLM gerador — mistral)
    → validate_product_vision  (checklist Python puro)
@@ -64,7 +64,7 @@ Camadas do código (`src/aqua_qe_product_manager/`):
 - **`skills/`** — 24 funções, cada uma com um único efeito colateral e uma única responsabilidade (ver seção 5).
 - **`workflow/`** — orquestração da sequência de skills por artefato: `generate_problem_discovery.py` (sem trio generate/finalize/refine — descoberta não tem ciclo de aceite formal), `generate_product_vision.py`, `generate_product_strategy.py`, `generate_prd.py` (os três últimos seguindo o trio `generate_x_draft`/`finalize_x`/`refine_x_draft`).
 - **`orchestrator/product_manager.py`** — quatro pontos de entrada finos, um por modo (`handle_discovery`/`handle_vision`/`handle_strategy`/`handle_prd`), cada um delegando ao workflow correspondente.
-- **`services/`** — uma única integração externa nesta fase: `llm_service` (Ollama).
+- **`services/`** — `llm_service` (Ollama, geração/revisão) e `jira_service`/`confluence_service` (Jira Cloud/Confluence Cloud REST API, **apenas leitura** — escrita/criação continua exclusiva do Product Owner).
 
 `PRDDraft` tem exatamente os mesmos campos do `PRDDraft` do Product Owner — não por coincidência, mas por design: é o contrato de compatibilidade que permite o handoff (seção 7) sem nenhuma mudança de código no lado do Product Owner. Artefatos ricos (descoberta, visão, estratégia) são **input que enriquece a geração** desses mesmos campos, não seções novas no PRD exportado.
 
@@ -74,7 +74,7 @@ Skills sem LLM (Python puro, determinísticas):
 
 - `validate_product_vision`, `validate_product_strategy`, `validate_prd` — checklist estrutural.
 - `format_prd_markdown` — formata o PRD em Markdown, byte-compatível com a entrada esperada pelo Product Owner.
-- `read_text_file`, `parse_chat_transcript`/`format_chat_transcript`, `export_markdown` — I/O e normalização de entrada.
+- `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`/`format_chat_transcript`, `export_markdown` — I/O e normalização de entrada. `read_jira_issue`/`read_confluence_page` fazem chamada HTTP real (Jira/Confluence Cloud REST API), **apenas leitura** — nunca escrevem de volta.
 
 Skills com LLM gerador (`OLLAMA_MODEL`, padrão `mistral`):
 
@@ -126,6 +126,7 @@ Essa separação preserva a característica determinística/auditável de cada a
 ## 9. Stack técnico
 
 - **LLM local via Ollama** — `mistral` para geração, `phi4` como revisor independente. Mesma escolha de infraestrutura do Product Owner, deliberadamente reaproveitada em vez de introduzir um terceiro provedor sem necessidade comprovada.
+- **Jira Cloud / Confluence Cloud (REST API, leitura)** — mesmas credenciais do Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`), reaproveitadas via `httpx`; conversão ADF→texto (Jira) e storage format XHTML→texto (Confluence) portadas verbatim dos respectivos `services/` do Product Owner.
 - **Sem RAG/embeddings nesta fase** — `knowledge/methodology/` é pequeno o suficiente para caber direto no prompt de cada skill; `retrieve_chunks` fica para uma fase futura, se o volume de conhecimento crescer.
 - **`uv`** para dependências — projeto standalone (repositório próprio), com `ollama`, `httpx` e `python-dotenv` declarados em `pyproject.toml`.
 - **Python 3.12+**, `src/` layout.
@@ -144,7 +145,7 @@ A avaliação do agente em produção combina três camadas que nunca se substit
 
 - **Priorização formal** (RICE/MoSCoW/Kano/WSJF) — avaliada e adiada para uma Fase 2, quando houver um backlog real grande o suficiente para justificá-la.
 - **MVP scope formal e business case** — mesma decisão: adiados até haver um consumidor real desses artefatos.
-- **Integração com Jira/Confluence** — o Product Owner já cobre a leitura/escrita nesses sistemas; este agente, nesta fase, trabalha só com arquivo de texto/chat como entrada.
+- **Escrita/criação no Jira/Confluence** — este agente só lê desses sistemas (`--jira`/`--confluence`); publicar o PRD como página nova ou atualizar um ticket continua exclusivo do Product Owner (`create_confluence_page`/`update_jira_issue`), que já cobre esse caso.
 - **RAG sobre `knowledge/methodology/`** — adiado enquanto o volume de conhecimento couber direto no prompt (ver seção 9).
 - **Resiliência a falhas de infraestrutura do Ollama local** — mesma decisão consciente do Product Owner: reexecutar manualmente em vez de adicionar retry automático, até haver evidência de que o custo de complexidade compensa.
 

@@ -2,7 +2,7 @@
 
 > Documentação das skills implementadas em `../../src/aqua_qe_product_manager/skills/`, no formato definido em `../standards/skill_standard.md`. Ordem conforme `agent_manifest.yaml`.
 >
-> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions` e `refine_prd` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd` e `format_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação.
+> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions` e `refine_prd` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd` e `format_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação (`read_jira_issue`/`read_confluence_page` fazem chamada HTTP real ao Jira/Confluence Cloud via `services/jira_service.py`/`services/confluence_service.py`, não ao LLM).
 
 ## read_text_file
 
@@ -11,6 +11,24 @@
 - **Saída**: `str`.
 - **Efeitos colaterais**: leitura de arquivo em disco.
 - **Erros esperados**: arquivo inexistente ou sem permissão de leitura.
+- **Dependências**: nenhuma.
+
+## read_jira_issue
+
+- **Descrição**: busca um ticket do Jira Cloud (resumo + descrição) e retorna como texto simples, convertendo do Atlassian Document Format (ADF). Apenas leitura — este agente nunca escreve de volta no Jira (isso é responsabilidade exclusiva do AQuA-QE Product Owner).
+- **Entrada**: `issue_key: str` (ex.: `"PROJ-123"`).
+- **Saída**: `str`.
+- **Efeitos colaterais**: chamada HTTP `GET` ao Jira Cloud (`JIRA_BASE_URL`, autenticação Basic com `JIRA_EMAIL`/`JIRA_API_TOKEN`).
+- **Erros esperados**: credencial ausente (`KeyError` em `os.environ`), ticket inexistente ou sem permissão (HTTP 4xx, propagado via `raise_for_status`).
+- **Dependências**: nenhuma.
+
+## read_confluence_page
+
+- **Descrição**: busca uma página do Confluence Cloud (aceita a URL completa ou apenas o ID) e retorna título + corpo como texto simples, convertendo do storage format (XHTML). Apenas leitura — publicar/atualizar página no Confluence não está no escopo desta fase.
+- **Entrada**: `pagina: str` (URL completa ou ID).
+- **Saída**: `str`.
+- **Efeitos colaterais**: chamada HTTP `GET` ao Confluence Cloud (mesmas credenciais do Jira: `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`).
+- **Erros esperados**: credencial ausente, página inexistente ou sem permissão (HTTP 4xx, propagado via `raise_for_status`).
 - **Dependências**: nenhuma.
 
 ## parse_chat_transcript

@@ -33,7 +33,7 @@ No change is needed in Product Owner's code — it already accepts a `.md` file 
 - **`src/aqua_qe_product_manager/models/`** — the agent's data structures (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — the latter with the exact same fields as Product Owner's `PRDDraft`).
 - **`src/aqua_qe_product_manager/workflow/`** — orchestration of the skill sequence per artifact (discovery, vision, strategy, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — entry point that decides which workflow to run per mode.
-- **`src/aqua_qe_product_manager/services/`** — external integration: `llm_service` (local Ollama). No RAG/Jira/Confluence at this phase.
+- **`src/aqua_qe_product_manager/services/`** — external integrations: `llm_service` (local Ollama, generation/review), `jira_service`/`confluence_service` (Jira Cloud/Confluence Cloud REST API, **read-only** — writing/creating stays exclusive to Product Owner). No RAG at this phase.
 
 ## Setup
 
@@ -45,6 +45,7 @@ This is a standalone repository (not part of any monorepo) — `uv sync` here re
    ollama pull mistral   # generation
    ollama pull phi4      # independent reviewer
    ```
+   Jira/Confluence are optional — only fill in `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN` in `.env` if you plan to use `--jira`/`--confluence` (token generated at `id.atlassian.com/manage-profile/security/api-tokens`).
 3. Clone this repository and install dependencies:
    ```bash
    git clone https://github.com/dufelizardo/AQuA-QE-Product-Manager.git
@@ -77,9 +78,15 @@ uv run python run.py --modo prd --texto "Customers need to be able to buy CDs th
 
 # Full pipeline — discovery -> vision -> strategy -> PRD, with human acceptance at each step
 uv run python run.py --modo completo --arquivo idea.txt --refinar --saida prd.md
+
+# Input from a Jira Cloud ticket or a Confluence Cloud page
+uv run python run.py --modo completo --jira PROJ-123 --refinar --saida prd.md
+uv run python run.py --modo completo --confluence "https://your-site.atlassian.net/wiki/.../pages/163841/..." --refinar --saida prd.md
 ```
 
 `--saida` is optional in every mode that produces an artifact (without it, the result is only printed to the terminal). `--refinar` enables the interactive clarifying-questions/refinement cycle before acceptance — but acceptance itself is **always** explicitly asked, with or without this flag (see `docs/agent/acceptance_patterns.md`).
+
+`--jira`/`--confluence` are read-only — they fetch the source text (ticket summary+description, or page title+body), but this agent never writes back to those systems; write-back and ticket/page creation stay exclusive to Product Owner.
 
 The `completo` mode is the recommended path for the Product Owner handoff: it chains discovery, vision, strategy and PRD in a single run, using each accepted artifact as context for the next, and produces a single `prd.md` ready for `--modo lote --arquivo prd.md` in Product Owner. The standalone `prd` mode, with no prior context, behaves like Product Owner's own `--modo prd` (raw idea → PRD) — useful when formal discovery/vision/strategy aren't needed.
 

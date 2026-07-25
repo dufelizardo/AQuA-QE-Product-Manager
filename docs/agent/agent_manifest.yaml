@@ -11,6 +11,8 @@ inputs:
   - txt
   - markdown
   - chat
+  - jira
+  - confluence
 
 outputs:
   - problem_statement
@@ -24,6 +26,8 @@ outputs:
 
 skills:
   - read_text_file
+  - read_jira_issue
+  - read_confluence_page
   - parse_chat_transcript
   - format_chat_transcript
   - identify_problem_statement

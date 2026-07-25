@@ -14,6 +14,8 @@ Ver `objectives.md` — rastreabilidade e honestidade sobre lacunas acima de com
 
 - Arquivo de texto `.txt` ou `.md` (via `read_text_file`).
 - Chat — transcrição multi-remetente ou texto corrido, normalizada via `parse_chat_transcript`/`format_chat_transcript`.
+- Ticket do Jira Cloud (via `read_jira_issue`, resumo + descrição).
+- Página do Confluence Cloud (via `read_confluence_page`, título + corpo) — URL completa ou apenas o ID.
 
 ## Saídas esperadas
 

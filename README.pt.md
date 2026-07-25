@@ -33,7 +33,7 @@ Nenhuma mudança é necessária no código do Product Owner — ele já aceita a
 - **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner).
 - **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
-- **`src/aqua_qe_product_manager/services/`** — integração externa: `llm_service` (Ollama local). Sem RAG/Jira/Confluence nesta fase.
+- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama local, geração/revisão), `jira_service`/`confluence_service` (Jira Cloud/Confluence Cloud REST API, **apenas leitura** — escrita/criação continua exclusiva do Product Owner). Sem RAG nesta fase.
 
 ## Configuração
 
@@ -45,6 +45,7 @@ Este é um repositório independente (não faz parte de nenhum monorepo) — o `
    ollama pull mistral   # geração
    ollama pull phi4      # revisor independente
    ```
+   Jira/Confluence são opcionais — só preencha `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN` no `.env` se for usar `--jira`/`--confluence` (token gerado em `id.atlassian.com/manage-profile/security/api-tokens`).
 3. Clone este repositório e instale as dependências:
    ```bash
    git clone https://github.com/dufelizardo/AQuA-QE-Product-Manager.git
@@ -77,9 +78,15 @@ uv run python run.py --modo prd --texto "Clientes precisam conseguir contratar C
 
 # Pipeline completo — descoberta -> visão -> estratégia -> PRD, com aceite humano em cada etapa
 uv run python run.py --modo completo --arquivo ideia.txt --refinar --saida prd.md
+
+# Entrada a partir de um ticket Jira Cloud ou de uma página do Confluence Cloud
+uv run python run.py --modo completo --jira PROJ-123 --refinar --saida prd.md
+uv run python run.py --modo completo --confluence "https://seu-site.atlassian.net/wiki/.../pages/163841/..." --refinar --saida prd.md
 ```
 
 `--saida` é opcional em todos os modos que produzem artefato (sem ela, o resultado só é impresso no terminal). `--refinar` ativa o ciclo interativo de perguntas/refinamento antes do aceite — mas o aceite em si é **sempre** perguntado explicitamente, com ou sem essa flag (ver `docs/agent/acceptance_patterns.md`).
+
+`--jira`/`--confluence` são apenas leitura — buscam o texto de origem (resumo+descrição do ticket, ou título+corpo da página), mas este agente nunca escreve de volta nesses sistemas; write-back e criação de ticket/página continuam exclusivos do Product Owner.
 
 O modo `completo` é o caminho recomendado para o handoff ao Product Owner: encadeia descoberta, visão, estratégia e PRD numa execução só, usando cada artefato aceito como contexto para o próximo, e produz um único `prd.md` pronto para `--modo lote --arquivo prd.md` no Product Owner. O modo `prd` isolado, sem contexto prévio, se comporta como o `--modo prd` do Product Owner (ideia crua → PRD) — útil quando descoberta/visão/estratégia formais não são necessárias.
 
