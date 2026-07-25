@@ -55,7 +55,7 @@ Input (.txt/Markdown/chat/Jira/Confluence)
    → generate_product_strategy (uses the accepted vision) → validate/review/refine → explicit human acceptance
    → generate_prd (uses discovery + vision + strategy, when they exist) → validate/review/refine → explicit human acceptance
    → format_prd_markdown → export_markdown
-   → [optional] create_confluence_page (--publicar-confluence, after explicit human confirmation)
+   → [optional] create_confluence_page / update_confluence_page (--publicar-confluence / --atualizar-confluence, after explicit human confirmation)
    → (outside this agent) AQuA-QE Product Owner consumes the PRD via --modo lote --arquivo
 ```
 
@@ -65,7 +65,7 @@ Code layers (`src/aqua_qe_product_manager/`):
 - **`skills/`** — each with a single side effect and a single responsibility (see section 5).
 - **`workflow/`** — orchestrates the skill sequence per artifact: `generate_problem_discovery.py` (no generate/finalize/refine trio — discovery has no formal acceptance cycle), `generate_product_vision.py`, `generate_product_strategy.py`, `generate_prd.py` (the latter three following the `generate_x_draft`/`finalize_x`/`refine_x_draft` trio).
 - **`orchestrator/product_manager.py`** — four thin entry points, one per mode (`handle_discovery`/`handle_vision`/`handle_strategy`/`handle_prd`), each delegating to its corresponding workflow.
-- **`services/`** — `llm_service` (Ollama, generation/review), `jira_service` (Jira Cloud REST API, **read-only**) and `confluence_service` (Confluence Cloud REST API, reading + new-page creation — this agent's only external write, used by `--publicar-confluence`).
+- **`services/`** — `llm_service` (Ollama, generation/review), `jira_service` (Jira Cloud REST API, **read-only**) and `confluence_service` (Confluence Cloud REST API, reading + new-page creation + existing-page update — this agent's only external writes, used by `--publicar-confluence`/`--atualizar-confluence`).
 
 `PRDDraft` has the exact same fields as Product Owner's `PRDDraft` — not by coincidence, but by design: it's the compatibility contract that enables the handoff (section 7) with zero code changes on Product Owner's side. Rich artifacts (discovery, vision, strategy) are **input that enriches the generation** of those same fields, not new sections in the exported PRD.
 
@@ -77,7 +77,7 @@ Skills with no LLM (pure Python, deterministic):
 - `format_prd_markdown` — formats the PRD as Markdown, byte-compatible with the input Product Owner expects.
 - `parse_prd_markdown` — the inverse: reconstructs a `PRDDraft` from an already-existing PRD `.md`, preserving the original wording field by field (`--modo prd --prd-existente`), instead of the LLM rewriting everything from scratch based on the text.
 - `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`/`format_chat_transcript`, `export_markdown` — input I/O and normalization. `read_jira_issue`/`read_confluence_page` make a real HTTP call (Jira/Confluence Cloud REST API), **read-only** — never writing back.
-- `create_confluence_page` — this agent's only skill that writes to an external system: publishes the accepted PRD as a new Confluence Cloud page (`--publicar-confluence`), always after explicit human confirmation, separate from the PRD's own acceptance. No update-existing-page path — same decision as Product Owner about not keeping code with no CLI consumer.
+- `create_confluence_page`/`update_confluence_page` — this agent's only skills that write to an external system: publish the accepted PRD/vision/strategy as a **new** Confluence Cloud page or update an **already-existing** one (`--publicar-confluence`/`--atualizar-confluence`, mutually exclusive), always after explicit human confirmation, separate from the artifact's own acceptance. Unlike Product Owner, which has the update skill but never wired it to any of its own CLI commands — here it has a real consumer.
 
 Skills with a generator LLM (`OLLAMA_MODEL`, default `mistral`):
 
@@ -125,12 +125,13 @@ This separation preserves each agent's deterministic/auditable nature — neithe
 - **Strategy** (`--modo estrategia`) — generates the vision internally (same input used as the idea) and, once accepted, generates and refines the strategy from it.
 - **PRD** (`--modo prd`) — generates and refines the PRD in isolation, with no prior discovery/vision/strategy; behavior equivalent to Product Owner's own `--modo prd` (raw idea → PRD) — the simplest path, preserved for compatibility. With `--prd-existente <file.md>`, it skips generation and loads the already-written PRD via `parse_prd_markdown`, going straight into validation/review/refinement — to refine an existing PRD, not recreate a new one from it.
 - **Complete** (`--modo completo`) — chains discovery → vision → strategy → PRD in a single run, using each accepted artifact as context for the next, with human acceptance at every step. The recommended path for the Product Owner handoff.
-- **`--publicar-confluence`** (`prd`/`completo` modes) — after explicit human acceptance of the PRD, asks for a title and publishes the page to Confluence Cloud (`create_confluence_page`), returning the created URL. Same pattern as Product Owner's own `--publicar-confluence`.
+- **`--publicar-confluence`** (`prd`/`completo`/`visao`/`estrategia` modes) — after explicit human acceptance of the artifact, asks for a title and publishes the page to Confluence Cloud (`create_confluence_page`), returning the created URL. Same pattern as Product Owner's own `--publicar-confluence`, extended beyond the PRD.
+- **`--atualizar-confluence <URL or ID>`** (same modes, mutually exclusive with `--publicar-confluence`) — updates an already-existing page (`update_confluence_page`) instead of creating a new one, keeping the title and incrementing the version. No equivalent wired into Product Owner's CLI.
 
 ## 9. Technical stack
 
 - **Local LLM via Ollama** — `mistral` for generation, `phi4` as an independent reviewer. Same infrastructure choice as Product Owner, deliberately reused instead of introducing a third provider without proven need.
-- **Jira Cloud (REST API, read-only) / Confluence Cloud (REST API, read + new-page creation)** — same credentials as Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`, plus `CONFLUENCE_SPACE_KEY` to publish), reused via `httpx`; ADF→text (Jira), XHTML storage format→text (reading) and text→storage format (writing) conversion ported verbatim from Product Owner's respective `services/`.
+- **Jira Cloud (REST API, read-only) / Confluence Cloud (REST API, read + new-page creation/update)** — same credentials as Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`, plus `CONFLUENCE_SPACE_KEY` to publish), reused via `httpx`; ADF→text (Jira), XHTML storage format→text (reading) and text→storage format (writing) conversion ported verbatim from Product Owner's respective `services/`.
 - **No RAG/embeddings at this phase** — `knowledge/methodology/` is small enough to fit directly in each skill's prompt; `retrieve_chunks` is left for a future phase, if the knowledge volume grows.
 - **`uv`** for dependencies — standalone project (own repository), with `ollama`, `httpx` and `python-dotenv` declared in `pyproject.toml`.
 - **Python 3.12+**, `src/` layout.
@@ -149,13 +150,13 @@ Evaluating the agent in production combines three layers that never replace one 
 
 - **Formal prioritization** (RICE/MoSCoW/Kano/WSJF) — evaluated and deferred to a future Phase 2, once there's a real backlog large enough to justify it.
 - **Formal MVP scope and business case** — same decision: deferred until there's a real consumer for those artifacts.
-- **Writing to Jira / updating an existing Confluence page** — this agent writes exactly one thing (`create_confluence_page`, a new page); updating an existing Jira ticket or Confluence page stays exclusive to Product Owner (`update_jira_issue`), which already covers that case.
+- **Writing to Jira** — this agent only reads Jira tickets; creating or updating a ticket stays exclusive to Product Owner (`create_jira_story`/`update_jira_issue`), which already covers that case.
 - **RAG over `knowledge/methodology/`** — deferred while the knowledge volume still fits directly in the prompt (see section 9).
 - **Resilience to local Ollama infrastructure failures** — same conscious decision as Product Owner: rerun manually instead of adding automatic retry, until there's evidence the complexity cost is worth it.
 
 ## 12. How to run it
 
-See `README.md`/`README.pt.md` for the full installation walkthrough (Python 3.12+, `uv`, Ollama + models, `.env.example` → `.env`) and every usage example for `run.py` (`--modo descoberta`/`visao`/`estrategia`/`prd`/`completo`, `--arquivo`/`--texto`/`--jira`/`--confluence`/`--prd-existente`, `--refinar`, `--saida`, `--publicar-confluence`).
+See `README.md`/`README.pt.md` for the full installation walkthrough (Python 3.12+, `uv`, Ollama + models, `.env.example` → `.env`) and every usage example for `run.py` (`--modo descoberta`/`visao`/`estrategia`/`prd`/`completo`, `--arquivo`/`--texto`/`--jira`/`--confluence`/`--prd-existente`, `--refinar`, `--saida`, `--publicar-confluence`/`--atualizar-confluence`).
 
 ## 13. Conclusion
 

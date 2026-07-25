@@ -20,7 +20,7 @@ Ver `objectives.md` — rastreabilidade e honestidade sobre lacunas acima de com
 
 ## Saídas esperadas
 
-Ver `output_schema.md` — problem statement/personas/JTBD/contexto de mercado (descoberta), visão de produto, estratégia de produto e PRD, sempre com `status` explícito (`draft_validated`, `pending_clarification` ou `accepted`). Opcionalmente, o PRD aceito também pode ser publicado como página nova no Confluence Cloud (via `create_confluence_page`, `--publicar-confluence`), sempre sob confirmação humana explícita — nunca automático.
+Ver `output_schema.md` — problem statement/personas/JTBD/contexto de mercado (descoberta), visão de produto, estratégia de produto e PRD, sempre com `status` explícito (`draft_validated`, `pending_clarification` ou `accepted`). Opcionalmente, o PRD/visão/estratégia aceitos também podem ser publicados como página nova (`create_confluence_page`, `--publicar-confluence`) ou usados para atualizar uma página já existente (`update_confluence_page`, `--atualizar-confluence`) no Confluence Cloud, sempre sob confirmação humana explícita — nunca automático, e nunca os dois ao mesmo tempo.
 
 ## Comportamentos esperados
 

@@ -48,6 +48,9 @@ from aqua_qe_product_manager.skills.parse_chat_transcript import parse_chat_tran
 from aqua_qe_product_manager.skills.read_confluence_page import read_confluence_page  # noqa: E402
 from aqua_qe_product_manager.skills.read_jira_issue import read_jira_issue  # noqa: E402
 from aqua_qe_product_manager.skills.read_text_file import read_text_file  # noqa: E402
+from aqua_qe_product_manager.skills.update_confluence_page import (  # noqa: E402
+    update_confluence_page,
+)
 from aqua_qe_product_manager.workflow.generate_prd import refine_prd_draft  # noqa: E402
 from aqua_qe_product_manager.workflow.generate_product_strategy import (  # noqa: E402
     refine_strategy_draft,
@@ -258,13 +261,27 @@ def _ciclo_de_refinamento_prd(draft: PRDDraft) -> PRDDraft:
     return draft
 
 
-def _publicar_prd_confluence(draft: PRDDraft) -> None:
-    if not _perguntar_sim_nao("\nPublicar este PRD no Confluence?"):
+def _publicar_ou_atualizar_confluence(
+    texto_formatado: str,
+    publicar_confluence: bool,
+    atualizar_confluence: str | None,
+) -> None:
+    """Cria uma página nova ou atualiza uma existente no Confluence, sempre sob confirmação humana explícita. Compartilhado entre PRD, visão e estratégia."""
+    if atualizar_confluence:
+        if not _perguntar_sim_nao(
+            f"\nAtualizar a página {atualizar_confluence} no Confluence com esta versão?"
+        ):
+            return
+        update_confluence_page(atualizar_confluence, texto_formatado)
+        print(f"página atualizada no Confluence: {atualizar_confluence}")
         return
 
-    titulo = input("Título da página no Confluence: ").strip()
-    url = create_confluence_page(draft, titulo)
-    print(f"PRD publicado no Confluence: {url}")
+    if publicar_confluence:
+        if not _perguntar_sim_nao("\nPublicar no Confluence?"):
+            return
+        titulo = input("Título da página no Confluence: ").strip()
+        url = create_confluence_page(texto_formatado, titulo)
+        print(f"publicado no Confluence: {url}")
 
 
 def _finalizar_prd_interativo(
@@ -272,6 +289,7 @@ def _finalizar_prd_interativo(
     saida: str | None,
     refinar: bool,
     publicar_confluence: bool = False,
+    atualizar_confluence: str | None = None,
 ) -> str | None:
     """Ciclo de refinamento/aceite/exportação/publicação compartilhado, independente de o PRD ter sido gerado ou carregado de um arquivo existente."""
     _imprimir_prd(draft)
@@ -289,8 +307,7 @@ def _finalizar_prd_interativo(
         export_markdown(texto_final, saida)
         print(f"exportado para: {saida}")
 
-    if publicar_confluence:
-        _publicar_prd_confluence(draft)
+    _publicar_ou_atualizar_confluence(texto_final, publicar_confluence, atualizar_confluence)
 
     return texto_final
 
@@ -301,20 +318,29 @@ def _rodar_prd(
     saida: str | None,
     refinar: bool,
     publicar_confluence: bool = False,
+    atualizar_confluence: str | None = None,
 ) -> str | None:
     """Gera o PRD; retorna o texto formatado se aceito, ou None."""
     draft = handle_prd(ideia, contexto)
     print("\n--- PRD ---")
-    return _finalizar_prd_interativo(draft, saida, refinar, publicar_confluence)
+    return _finalizar_prd_interativo(
+        draft, saida, refinar, publicar_confluence, atualizar_confluence
+    )
 
 
 def _rodar_prd_existente(
-    caminho: str, saida: str | None, refinar: bool, publicar_confluence: bool = False
+    caminho: str,
+    saida: str | None,
+    refinar: bool,
+    publicar_confluence: bool = False,
+    atualizar_confluence: str | None = None,
 ) -> str | None:
     """Carrega um PRD existente e aplica o mesmo ciclo de validação/revisão/refinamento/aceite/publicação, preservando a redação original nos campos que o refinamento não tocar."""
     draft = handle_existing_prd(caminho)
     print("\n--- PRD carregado de arquivo existente ---")
-    return _finalizar_prd_interativo(draft, saida, refinar, publicar_confluence)
+    return _finalizar_prd_interativo(
+        draft, saida, refinar, publicar_confluence, atualizar_confluence
+    )
 
 
 # --- Exportação isolada de visão/estratégia -------------------------------
@@ -357,7 +383,11 @@ def _formatar_estrategia_markdown(strategy: ProductStrategy) -> str:
 
 
 def _rodar_completo(
-    texto: str, saida: str | None, refinar: bool, publicar_confluence: bool = False
+    texto: str,
+    saida: str | None,
+    refinar: bool,
+    publicar_confluence: bool = False,
+    atualizar_confluence: str | None = None,
 ) -> None:
     """Encadeia descoberta -> visão -> estratégia -> PRD numa execução só, com aceite humano em cada etapa."""
     problem_statement, personas, jobs, market_analysis = _rodar_descoberta(texto)
@@ -380,7 +410,9 @@ def _rodar_completo(
         return
 
     contexto_prd = {**contexto_visao, "strategy": strategy}
-    prd_aceito = _rodar_prd(texto, contexto_prd, saida, refinar, publicar_confluence)
+    prd_aceito = _rodar_prd(
+        texto, contexto_prd, saida, refinar, publicar_confluence, atualizar_confluence
+    )
     if prd_aceito is None:
         print("\nExecução interrompida: PRD descartado.")
 
@@ -427,8 +459,19 @@ def main() -> None:
         action="store_true",
         dest="publicar_confluence",
         help=(
-            "Modos prd/completo: após aceitar o PRD, pergunta o título e "
-            "publica a página no Confluence (CONFLUENCE_SPACE_KEY)."
+            "Modos prd/completo/visao/estrategia: após aceitar o artefato, "
+            "pergunta o título e publica como página nova no Confluence "
+            "(CONFLUENCE_SPACE_KEY)."
+        ),
+    )
+    parser.add_argument(
+        "--atualizar-confluence",
+        dest="atualizar_confluence",
+        help=(
+            "Modos prd/completo/visao/estrategia: após aceitar o artefato, "
+            "atualiza a página existente informada (URL completa ou ID) no "
+            "Confluence, em vez de criar uma nova. Mutuamente exclusivo com "
+            "--publicar-confluence."
         ),
     )
     args = parser.parse_args()
@@ -440,12 +483,21 @@ def main() -> None:
         )
     if args.prd_existente and args.modo != "prd":
         parser.error("--prd-existente só é válido com --modo prd.")
-    if args.publicar_confluence and args.modo not in ("prd", "completo"):
-        parser.error("--publicar-confluence só é válido com --modo prd ou --modo completo.")
+    if args.publicar_confluence and args.atualizar_confluence:
+        parser.error("--publicar-confluence e --atualizar-confluence são mutuamente exclusivos.")
+    _modos_confluence = ("prd", "completo", "visao", "estrategia")
+    if args.publicar_confluence and args.modo not in _modos_confluence:
+        parser.error(f"--publicar-confluence só é válido com --modo {'/'.join(_modos_confluence)}.")
+    if args.atualizar_confluence and args.modo not in _modos_confluence:
+        parser.error(f"--atualizar-confluence só é válido com --modo {'/'.join(_modos_confluence)}.")
 
     if args.prd_existente:
         _rodar_prd_existente(
-            args.prd_existente, args.saida, args.refinar, args.publicar_confluence
+            args.prd_existente,
+            args.saida,
+            args.refinar,
+            args.publicar_confluence,
+            args.atualizar_confluence,
         )
         return
 
@@ -455,22 +507,41 @@ def main() -> None:
         _rodar_descoberta(texto)
     elif args.modo == "visao":
         vision = _rodar_visao(texto, None, args.refinar)
-        if vision and args.saida:
-            export_markdown(_formatar_visao_markdown(vision), args.saida)
-            print(f"exportado para: {args.saida}")
+        if vision:
+            texto_visao = _formatar_visao_markdown(vision)
+            if args.saida:
+                export_markdown(texto_visao, args.saida)
+                print(f"exportado para: {args.saida}")
+            _publicar_ou_atualizar_confluence(
+                texto_visao, args.publicar_confluence, args.atualizar_confluence
+            )
     elif args.modo == "estrategia":
         vision = _rodar_visao(texto, None, args.refinar)
         if vision is None:
             print("\nExecução interrompida: visão de produto descartada.")
             return
         strategy = _rodar_estrategia(vision, {"vision": vision}, args.refinar)
-        if strategy and args.saida:
-            export_markdown(_formatar_estrategia_markdown(strategy), args.saida)
-            print(f"exportado para: {args.saida}")
+        if strategy:
+            texto_estrategia = _formatar_estrategia_markdown(strategy)
+            if args.saida:
+                export_markdown(texto_estrategia, args.saida)
+                print(f"exportado para: {args.saida}")
+            _publicar_ou_atualizar_confluence(
+                texto_estrategia, args.publicar_confluence, args.atualizar_confluence
+            )
     elif args.modo == "prd":
-        _rodar_prd(texto, None, args.saida, args.refinar, args.publicar_confluence)
+        _rodar_prd(
+            texto,
+            None,
+            args.saida,
+            args.refinar,
+            args.publicar_confluence,
+            args.atualizar_confluence,
+        )
     else:
-        _rodar_completo(texto, args.saida, args.refinar, args.publicar_confluence)
+        _rodar_completo(
+            texto, args.saida, args.refinar, args.publicar_confluence, args.atualizar_confluence
+        )
 
 
 if __name__ == "__main__":

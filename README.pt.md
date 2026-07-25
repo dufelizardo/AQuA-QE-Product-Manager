@@ -29,11 +29,11 @@ Nenhuma mudança é necessária no código do Product Owner — ele já aceita a
 - **`docs/agent/`** — especificação completa deste agente: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt e o `agent_manifest.yaml`.
 - **`knowledge/methodology/`** — material metodológico que orienta o agente (JTBD, North Star Framework, BABOK, ISO 29148).
 - **`knowledge/templates/`** — estrutura pura, sem conhecimento (templates de Problem Statement, Persona, Visão de Produto, Estratégia de Produto, PRD).
-- **`src/aqua_qe_product_manager/skills/`** — skills do agente em Python (ler arquivo de texto/ticket Jira/página Confluence, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar/carregar o PRD, exportar em Markdown, publicar página no Confluence). Lista completa em `docs/agent/skills.md`.
+- **`src/aqua_qe_product_manager/skills/`** — skills do agente em Python (ler arquivo de texto/ticket Jira/página Confluence, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar/carregar o PRD, exportar em Markdown, publicar/atualizar página no Confluence). Lista completa em `docs/agent/skills.md`.
 - **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner).
 - **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
-- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama local, geração/revisão), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova, usada por `--publicar-confluence`). Sem RAG nesta fase.
+- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama local, geração/revisão), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova + atualização de página existente, usadas por `--publicar-confluence`/`--atualizar-confluence`). Sem RAG nesta fase.
 
 ## Configuração
 
@@ -88,13 +88,19 @@ uv run python run.py --modo prd --prd-existente prd.md --refinar --saida prd.md
 
 # Publicar o PRD aceito como página nova no Confluence Cloud
 uv run python run.py --modo prd --texto "<ideia>" --refinar --publicar-confluence
+
+# Atualizar uma página já existente no Confluence, em vez de criar uma nova
+uv run python run.py --modo prd --texto "<ideia>" --refinar --atualizar-confluence 163841
+
+# Publicar a visão de produto (não só o PRD) como página no Confluence
+uv run python run.py --modo visao --texto "<ideia>" --refinar --publicar-confluence
 ```
 
 `--saida` é opcional em todos os modos que produzem artefato (sem ela, o resultado só é impresso no terminal). `--refinar` ativa o ciclo interativo de perguntas/refinamento antes do aceite — mas o aceite em si é **sempre** perguntado explicitamente, com ou sem essa flag (ver `docs/agent/acceptance_patterns.md`).
 
 `--prd-existente` só funciona com `--modo prd`: em vez de gerar um PRD novo via LLM, carrega o `.md` informado como `PRDDraft` estruturado (`parse_prd_markdown`, sem LLM), preservando a redação original campo a campo, e segue direto para o mesmo ciclo de validação/revisão/refinamento — útil para retomar um PRD já exportado sem reescrevê-lo do zero.
 
-`--publicar-confluence` (só com `--modo prd`/`completo`) pergunta, depois do PRD aceito, se deve publicá-lo como página nova no Confluence (`CONFLUENCE_SPACE_KEY`) — a única escrita externa deste agente, sempre sob confirmação humana explícita; não há atualização de página existente.
+`--publicar-confluence`/`--atualizar-confluence` (mutuamente exclusivos; válidos com `--modo prd`/`completo`/`visao`/`estrategia`) perguntam, depois do artefato aceito, se deve publicá-lo como página **nova** no Confluence (`CONFLUENCE_SPACE_KEY`) ou atualizar uma página **já existente** (`--atualizar-confluence <URL ou ID>`, mantendo título, incrementando a versão) — sempre sob confirmação humana explícita, distinta do aceite do artefato.
 
 `--jira`/`--confluence` são apenas leitura — buscam o texto de origem (resumo+descrição do ticket, ou título+corpo da página), mas este agente nunca escreve de volta nesses sistemas; write-back e criação de ticket/página continuam exclusivos do Product Owner.
 
