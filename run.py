@@ -27,6 +27,9 @@ from aqua_qe_product_manager.orchestrator.product_manager import (  # noqa: E402
     handle_strategy,
     handle_vision,
 )
+from aqua_qe_product_manager.skills.create_confluence_page import (  # noqa: E402
+    create_confluence_page,
+)
 from aqua_qe_product_manager.skills.export_markdown import export_markdown  # noqa: E402
 from aqua_qe_product_manager.skills.format_chat_transcript import (  # noqa: E402
     format_chat_transcript,
@@ -255,10 +258,22 @@ def _ciclo_de_refinamento_prd(draft: PRDDraft) -> PRDDraft:
     return draft
 
 
+def _publicar_prd_confluence(draft: PRDDraft) -> None:
+    if not _perguntar_sim_nao("\nPublicar este PRD no Confluence?"):
+        return
+
+    titulo = input("Título da página no Confluence: ").strip()
+    url = create_confluence_page(draft, titulo)
+    print(f"PRD publicado no Confluence: {url}")
+
+
 def _finalizar_prd_interativo(
-    draft: PRDDraft, saida: str | None, refinar: bool
+    draft: PRDDraft,
+    saida: str | None,
+    refinar: bool,
+    publicar_confluence: bool = False,
 ) -> str | None:
-    """Ciclo de refinamento/aceite/exportação compartilhado, independente de o PRD ter sido gerado ou carregado de um arquivo existente."""
+    """Ciclo de refinamento/aceite/exportação/publicação compartilhado, independente de o PRD ter sido gerado ou carregado de um arquivo existente."""
     _imprimir_prd(draft)
 
     if refinar:
@@ -274,23 +289,32 @@ def _finalizar_prd_interativo(
         export_markdown(texto_final, saida)
         print(f"exportado para: {saida}")
 
+    if publicar_confluence:
+        _publicar_prd_confluence(draft)
+
     return texto_final
 
 
 def _rodar_prd(
-    ideia: str, contexto: dict | None, saida: str | None, refinar: bool
+    ideia: str,
+    contexto: dict | None,
+    saida: str | None,
+    refinar: bool,
+    publicar_confluence: bool = False,
 ) -> str | None:
     """Gera o PRD; retorna o texto formatado se aceito, ou None."""
     draft = handle_prd(ideia, contexto)
     print("\n--- PRD ---")
-    return _finalizar_prd_interativo(draft, saida, refinar)
+    return _finalizar_prd_interativo(draft, saida, refinar, publicar_confluence)
 
 
-def _rodar_prd_existente(caminho: str, saida: str | None, refinar: bool) -> str | None:
-    """Carrega um PRD existente e aplica o mesmo ciclo de validação/revisão/refinamento/aceite, preservando a redação original nos campos que o refinamento não tocar."""
+def _rodar_prd_existente(
+    caminho: str, saida: str | None, refinar: bool, publicar_confluence: bool = False
+) -> str | None:
+    """Carrega um PRD existente e aplica o mesmo ciclo de validação/revisão/refinamento/aceite/publicação, preservando a redação original nos campos que o refinamento não tocar."""
     draft = handle_existing_prd(caminho)
     print("\n--- PRD carregado de arquivo existente ---")
-    return _finalizar_prd_interativo(draft, saida, refinar)
+    return _finalizar_prd_interativo(draft, saida, refinar, publicar_confluence)
 
 
 # --- Exportação isolada de visão/estratégia -------------------------------
@@ -332,7 +356,9 @@ def _formatar_estrategia_markdown(strategy: ProductStrategy) -> str:
 # --- Modo completo -------------------------------------------------------
 
 
-def _rodar_completo(texto: str, saida: str | None, refinar: bool) -> None:
+def _rodar_completo(
+    texto: str, saida: str | None, refinar: bool, publicar_confluence: bool = False
+) -> None:
     """Encadeia descoberta -> visão -> estratégia -> PRD numa execução só, com aceite humano em cada etapa."""
     problem_statement, personas, jobs, market_analysis = _rodar_descoberta(texto)
     contexto_descoberta = {
@@ -354,7 +380,7 @@ def _rodar_completo(texto: str, saida: str | None, refinar: bool) -> None:
         return
 
     contexto_prd = {**contexto_visao, "strategy": strategy}
-    prd_aceito = _rodar_prd(texto, contexto_prd, saida, refinar)
+    prd_aceito = _rodar_prd(texto, contexto_prd, saida, refinar, publicar_confluence)
     if prd_aceito is None:
         print("\nExecução interrompida: PRD descartado.")
 
@@ -396,6 +422,15 @@ def main() -> None:
             "com ou sem esta flag)."
         ),
     )
+    parser.add_argument(
+        "--publicar-confluence",
+        action="store_true",
+        dest="publicar_confluence",
+        help=(
+            "Modos prd/completo: após aceitar o PRD, pergunta o título e "
+            "publica a página no Confluence (CONFLUENCE_SPACE_KEY)."
+        ),
+    )
     args = parser.parse_args()
 
     if not any([args.arquivo, args.texto, args.jira, args.confluence, args.prd_existente]):
@@ -405,9 +440,13 @@ def main() -> None:
         )
     if args.prd_existente and args.modo != "prd":
         parser.error("--prd-existente só é válido com --modo prd.")
+    if args.publicar_confluence and args.modo not in ("prd", "completo"):
+        parser.error("--publicar-confluence só é válido com --modo prd ou --modo completo.")
 
     if args.prd_existente:
-        _rodar_prd_existente(args.prd_existente, args.saida, args.refinar)
+        _rodar_prd_existente(
+            args.prd_existente, args.saida, args.refinar, args.publicar_confluence
+        )
         return
 
     texto = _ler_entrada(args)
@@ -429,9 +468,9 @@ def main() -> None:
             export_markdown(_formatar_estrategia_markdown(strategy), args.saida)
             print(f"exportado para: {args.saida}")
     elif args.modo == "prd":
-        _rodar_prd(texto, None, args.saida, args.refinar)
+        _rodar_prd(texto, None, args.saida, args.refinar, args.publicar_confluence)
     else:
-        _rodar_completo(texto, args.saida, args.refinar)
+        _rodar_completo(texto, args.saida, args.refinar, args.publicar_confluence)
 
 
 if __name__ == "__main__":

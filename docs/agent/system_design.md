@@ -18,6 +18,7 @@ Entrada (.txt/Markdown/chat/Jira/Confluence)
       → [se reprovado] generate_prd_clarifying_questions → resposta humana → refine_prd → revalidar
       → aceite humano explícito
    → format_prd_markdown → export_markdown
+   → [opcional] create_confluence_page (--publicar-confluence, após confirmação humana explícita)
    → (fora deste agente) AQuA-QE Product Owner consome o PRD via --modo lote --arquivo
 ```
 
@@ -30,8 +31,8 @@ Caminho alternativo, só para PRD (`--modo prd --prd-existente arquivo.md`): `pa
 - **Skills** — funções descritas em `skills.md`, implementadas em `../../src/aqua_qe_product_manager/skills/`.
 - **Modelos de dados** — estruturas (`ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft`) implementadas em `../../src/aqua_qe_product_manager/models/`, conforme `output_schema.md`.
 - **Fontes de conhecimento** — `knowledge/methodology/` (JTBD, North Star Framework), consumidas diretamente pelos prompts das skills (sem RAG nesta fase — volume pequeno o suficiente para caber direto no contexto, ver `context_engineering.md`).
-- **Integrações externas de leitura** — `services/jira_service.py` e `services/confluence_service.py` (Jira Cloud e Confluence Cloud REST API, mesmas credenciais); apenas leitura — escrita/criação de tickets e páginas continua exclusiva do AQuA-QE Product Owner.
-- **Interfaces externas** — entrada: arquivo `.txt`/Markdown, texto de chat, ticket Jira Cloud ou página Confluence Cloud; saída: arquivo Markdown exportado (`export_markdown`/`format_prd_markdown`), consumido pelo AQuA-QE Product Owner como entrada normal.
+- **Integrações externas** — `services/jira_service.py` e `services/confluence_service.py` (Jira Cloud e Confluence Cloud REST API, mesmas credenciais). Jira é somente leitura (escrita/criação de tickets continua exclusiva do AQuA-QE Product Owner). Confluence tem uma única operação de escrita — `create_page`/`create_confluence_page`, criar página nova — sem atualização de página existente (mesma decisão do Product Owner de não replicar código sem consumidor no CLI).
+- **Interfaces externas** — entrada: arquivo `.txt`/Markdown, texto de chat, ticket Jira Cloud ou página Confluence Cloud; saída: arquivo Markdown exportado (`export_markdown`/`format_prd_markdown`), consumido pelo AQuA-QE Product Owner como entrada normal, e/ou uma página nova no Confluence Cloud (`create_confluence_page`, opcional, após aceite humano do PRD).
 
 ## Fluxo de dados
 
@@ -40,7 +41,7 @@ Caminho alternativo, só para PRD (`--modo prd --prd-existente arquivo.md`): `pa
 3. Visão de produto é gerada, validada, revisada e (se necessário) refinada com respostas do usuário, até aceite humano explícito.
 4. Estratégia de produto é gerada a partir da visão aceita, mesmo ciclo.
 5. PRD é gerado incorporando descoberta/visão/estratégia (quando existirem na mesma sessão) ou só a partir da ideia crua (quando não existirem) — mesmo ciclo de validação/revisão/refinamento/aceite.
-6. O PRD aceito é formatado (`format_prd_markdown`) e exportado (`export_markdown`).
+6. O PRD aceito é formatado (`format_prd_markdown`) e exportado (`export_markdown`) e, opcionalmente, publicado como página nova no Confluence Cloud (`create_confluence_page`, `--publicar-confluence`) — sempre sob uma segunda confirmação humana explícita, distinta do aceite do PRD.
 7. A aprovação final de cada artefato é sempre um passo humano, fora da responsabilidade do agente.
 
 ## Modos de operação
@@ -48,8 +49,8 @@ Caminho alternativo, só para PRD (`--modo prd --prd-existente arquivo.md`): `pa
 - **Descoberta** — sintetiza problem statement/personas/JTBD/mercado, sem ciclo de aceite formal (são inputs estruturados, não artefatos "aceitos" isoladamente).
 - **Visão** — gera e refina a visão de produto até aceite humano.
 - **Estratégia** — gera e refina a estratégia de produto a partir da visão aceita.
-- **PRD** — gera e refina o PRD, o artefato terminal desta fase, pronto para o handoff ao AQuA-QE Product Owner. Com `--prd-existente`, carrega um PRD `.md` já pronto (`parse_prd_markdown`) em vez de gerar um novo, e aplica o mesmo ciclo de validação/revisão/refinamento a partir dele.
-- **Completo** — encadeia os quatro modos acima numa execução só, com aceite humano em cada etapa.
+- **PRD** — gera e refina o PRD, o artefato terminal desta fase, pronto para o handoff ao AQuA-QE Product Owner. Com `--prd-existente`, carrega um PRD `.md` já pronto (`parse_prd_markdown`) em vez de gerar um novo, e aplica o mesmo ciclo de validação/revisão/refinamento a partir dele. Com `--publicar-confluence`, após o aceite, oferece publicar o PRD como página nova no Confluence.
+- **Completo** — encadeia os quatro modos acima numa execução só, com aceite humano em cada etapa. Também aceita `--publicar-confluence`, aplicado à etapa final de PRD.
 
 ## Restrições técnicas
 

@@ -29,11 +29,11 @@ Nenhuma mudança é necessária no código do Product Owner — ele já aceita a
 - **`docs/agent/`** — especificação completa deste agente: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt e o `agent_manifest.yaml`.
 - **`knowledge/methodology/`** — material metodológico que orienta o agente (JTBD, North Star Framework, BABOK, ISO 29148).
 - **`knowledge/templates/`** — estrutura pura, sem conhecimento (templates de Problem Statement, Persona, Visão de Produto, Estratégia de Produto, PRD).
-- **`src/aqua_qe_product_manager/skills/`** — 24 skills do agente em Python (ler arquivo de texto, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar o PRD, exportar em Markdown).
+- **`src/aqua_qe_product_manager/skills/`** — skills do agente em Python (ler arquivo de texto/ticket Jira/página Confluence, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar/carregar o PRD, exportar em Markdown, publicar página no Confluence). Lista completa em `docs/agent/skills.md`.
 - **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner).
 - **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
-- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama local, geração/revisão), `jira_service`/`confluence_service` (Jira Cloud/Confluence Cloud REST API, **apenas leitura** — escrita/criação continua exclusiva do Product Owner). Sem RAG nesta fase.
+- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama local, geração/revisão), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova, usada por `--publicar-confluence`). Sem RAG nesta fase.
 
 ## Configuração
 
@@ -45,7 +45,7 @@ Este é um repositório independente (não faz parte de nenhum monorepo) — o `
    ollama pull mistral   # geração
    ollama pull phi4      # revisor independente
    ```
-   Jira/Confluence são opcionais — só preencha `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN` no `.env` se for usar `--jira`/`--confluence` (token gerado em `id.atlassian.com/manage-profile/security/api-tokens`).
+   Jira/Confluence são opcionais — só preencha `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN` no `.env` se for usar `--jira`/`--confluence`/`--publicar-confluence` (token gerado em `id.atlassian.com/manage-profile/security/api-tokens`; `CONFLUENCE_SPACE_KEY` só é necessário para `--publicar-confluence`).
 3. Clone este repositório e instale as dependências:
    ```bash
    git clone https://github.com/dufelizardo/AQuA-QE-Product-Manager.git
@@ -85,11 +85,16 @@ uv run python run.py --modo completo --confluence "https://seu-site.atlassian.ne
 
 # Refinar um PRD .md já existente (carrega os campos originais, não reescreve do zero)
 uv run python run.py --modo prd --prd-existente prd.md --refinar --saida prd.md
+
+# Publicar o PRD aceito como página nova no Confluence Cloud
+uv run python run.py --modo prd --texto "<ideia>" --refinar --publicar-confluence
 ```
 
 `--saida` é opcional em todos os modos que produzem artefato (sem ela, o resultado só é impresso no terminal). `--refinar` ativa o ciclo interativo de perguntas/refinamento antes do aceite — mas o aceite em si é **sempre** perguntado explicitamente, com ou sem essa flag (ver `docs/agent/acceptance_patterns.md`).
 
 `--prd-existente` só funciona com `--modo prd`: em vez de gerar um PRD novo via LLM, carrega o `.md` informado como `PRDDraft` estruturado (`parse_prd_markdown`, sem LLM), preservando a redação original campo a campo, e segue direto para o mesmo ciclo de validação/revisão/refinamento — útil para retomar um PRD já exportado sem reescrevê-lo do zero.
+
+`--publicar-confluence` (só com `--modo prd`/`completo`) pergunta, depois do PRD aceito, se deve publicá-lo como página nova no Confluence (`CONFLUENCE_SPACE_KEY`) — a única escrita externa deste agente, sempre sob confirmação humana explícita; não há atualização de página existente.
 
 `--jira`/`--confluence` são apenas leitura — buscam o texto de origem (resumo+descrição do ticket, ou título+corpo da página), mas este agente nunca escreve de volta nesses sistemas; write-back e criação de ticket/página continuam exclusivos do Product Owner.
 
@@ -97,7 +102,7 @@ O modo `completo` é o caminho recomendado para o handoff ao Product Owner: enca
 
 ## Status
 
-`docs/agent/`, `docs/standards/` e `knowledge/` estão com conteúdo real preenchido. Em `src/`, as 24 skills e os quatro workflows (descoberta, visão, estratégia, PRD) estão implementados e cobertos por testes (mocks de LLM, sem chamada real a Ollama). Priorização (RICE/MoSCoW/Kano/WSJF), MVP scope formal e business case ficam para uma Fase 2 futura — deliberadamente fora do escopo desta primeira versão (ver `docs/agent/prd.md`, seção "Fora de escopo").
+`docs/agent/`, `docs/standards/` e `knowledge/` estão com conteúdo real preenchido. Em `src/`, todas as skills e os quatro workflows (descoberta, visão, estratégia, PRD) estão implementados e cobertos por testes (mocks de LLM, sem chamada real a Ollama/Jira/Confluence). Priorização (RICE/MoSCoW/Kano/WSJF), MVP scope formal e business case ficam para uma Fase 2 futura — deliberadamente fora do escopo desta primeira versão (ver `docs/agent/prd.md`, seção "Fora de escopo").
 
 Este projeto tem repositório git próprio, independente do monorepo raiz (conforme a convenção "todo projeto novo recebe repositório separado" — ver `CLAUDE.md` raiz do workspace).
 

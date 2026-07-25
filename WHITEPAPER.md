@@ -55,20 +55,21 @@ Entrada (.txt/Markdown/chat/Jira/Confluence)
    → generate_product_strategy (usa a visão aceita) → validate/review/refine → aceite humano explícito
    → generate_prd (usa descoberta + visão + estratégia, quando existirem) → validate/review/refine → aceite humano explícito
    → format_prd_markdown → export_markdown
+   → [opcional] create_confluence_page (--publicar-confluence, após confirmação humana explícita)
    → (fora deste agente) AQuA-QE Product Owner consome o PRD via --modo lote --arquivo
 ```
 
 Camadas do código (`src/aqua_qe_product_manager/`):
 
 - **`models/`** — estruturas de dados: `ProblemStatement`, `Persona`, `JobToBeDone`, `MarketAnalysis`/`Competitor`, `ProductVision`, `ProductStrategy`/`StrategicGoal`, `PRDDraft` e o enum `ArtifactStatus` (`draft_validated` / `pending_clarification` / `accepted`).
-- **`skills/`** — 24 funções, cada uma com um único efeito colateral e uma única responsabilidade (ver seção 5).
+- **`skills/`** — cada uma com um único efeito colateral e uma única responsabilidade (ver seção 5).
 - **`workflow/`** — orquestração da sequência de skills por artefato: `generate_problem_discovery.py` (sem trio generate/finalize/refine — descoberta não tem ciclo de aceite formal), `generate_product_vision.py`, `generate_product_strategy.py`, `generate_prd.py` (os três últimos seguindo o trio `generate_x_draft`/`finalize_x`/`refine_x_draft`).
 - **`orchestrator/product_manager.py`** — quatro pontos de entrada finos, um por modo (`handle_discovery`/`handle_vision`/`handle_strategy`/`handle_prd`), cada um delegando ao workflow correspondente.
-- **`services/`** — `llm_service` (Ollama, geração/revisão) e `jira_service`/`confluence_service` (Jira Cloud/Confluence Cloud REST API, **apenas leitura** — escrita/criação continua exclusiva do Product Owner).
+- **`services/`** — `llm_service` (Ollama, geração/revisão), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova — a única escrita externa deste agente, usada por `--publicar-confluence`).
 
 `PRDDraft` tem exatamente os mesmos campos do `PRDDraft` do Product Owner — não por coincidência, mas por design: é o contrato de compatibilidade que permite o handoff (seção 7) sem nenhuma mudança de código no lado do Product Owner. Artefatos ricos (descoberta, visão, estratégia) são **input que enriquece a geração** desses mesmos campos, não seções novas no PRD exportado.
 
-## 5. As 24 skills
+## 5. As skills
 
 Skills sem LLM (Python puro, determinísticas):
 
@@ -76,6 +77,7 @@ Skills sem LLM (Python puro, determinísticas):
 - `format_prd_markdown` — formata o PRD em Markdown, byte-compatível com a entrada esperada pelo Product Owner.
 - `parse_prd_markdown` — o inverso: reconstrói um `PRDDraft` a partir de um PRD `.md` já existente, preservando a redação original campo a campo (`--modo prd --prd-existente`), em vez de o LLM reescrever tudo do zero a partir do texto.
 - `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`/`format_chat_transcript`, `export_markdown` — I/O e normalização de entrada. `read_jira_issue`/`read_confluence_page` fazem chamada HTTP real (Jira/Confluence Cloud REST API), **apenas leitura** — nunca escrevem de volta.
+- `create_confluence_page` — a única skill deste agente que escreve num sistema externo: publica o PRD aceito como página nova no Confluence Cloud (`--publicar-confluence`), sempre após confirmação humana explícita e distinta do aceite do PRD. Sem atualização de página existente — mesma decisão do Product Owner de não manter código sem consumidor no CLI.
 
 Skills com LLM gerador (`OLLAMA_MODEL`, padrão `mistral`):
 
@@ -123,11 +125,12 @@ Essa separação preserva a característica determinística/auditável de cada a
 - **Estratégia** (`--modo estrategia`) — gera a visão internamente (mesma entrada como ideia) e, uma vez aceita, gera e refina a estratégia a partir dela.
 - **PRD** (`--modo prd`) — gera e refina o PRD isoladamente, sem descoberta/visão/estratégia prévias; comportamento equivalente ao `--modo prd` do Product Owner (ideia crua → PRD) — o caminho mais simples, preservado por compatibilidade. Com `--prd-existente <arquivo.md>`, pula a geração e carrega o PRD já pronto via `parse_prd_markdown`, indo direto para validação/revisão/refinamento — para refinar um PRD que já existe, não recriar um novo a partir dele.
 - **Completo** (`--modo completo`) — encadeia descoberta → visão → estratégia → PRD numa execução só, usando cada artefato aceito como contexto para o próximo, com aceite humano em cada etapa. O caminho recomendado para o handoff ao Product Owner.
+- **`--publicar-confluence`** (modos `prd`/`completo`) — após aceitação humana explícita do PRD, pergunta o título e publica a página no Confluence Cloud (`create_confluence_page`), retornando a URL criada. Mesmo padrão do `--publicar-confluence` do Product Owner.
 
 ## 9. Stack técnico
 
 - **LLM local via Ollama** — `mistral` para geração, `phi4` como revisor independente. Mesma escolha de infraestrutura do Product Owner, deliberadamente reaproveitada em vez de introduzir um terceiro provedor sem necessidade comprovada.
-- **Jira Cloud / Confluence Cloud (REST API, leitura)** — mesmas credenciais do Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`), reaproveitadas via `httpx`; conversão ADF→texto (Jira) e storage format XHTML→texto (Confluence) portadas verbatim dos respectivos `services/` do Product Owner.
+- **Jira Cloud (REST API, leitura) / Confluence Cloud (REST API, leitura + criação de página)** — mesmas credenciais do Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`, mais `CONFLUENCE_SPACE_KEY` para publicar), reaproveitadas via `httpx`; conversão ADF→texto (Jira), storage format XHTML→texto (leitura) e texto→storage format (escrita) portadas verbatim dos respectivos `services/` do Product Owner.
 - **Sem RAG/embeddings nesta fase** — `knowledge/methodology/` é pequeno o suficiente para caber direto no prompt de cada skill; `retrieve_chunks` fica para uma fase futura, se o volume de conhecimento crescer.
 - **`uv`** para dependências — projeto standalone (repositório próprio), com `ollama`, `httpx` e `python-dotenv` declarados em `pyproject.toml`.
 - **Python 3.12+**, `src/` layout.
@@ -146,13 +149,13 @@ A avaliação do agente em produção combina três camadas que nunca se substit
 
 - **Priorização formal** (RICE/MoSCoW/Kano/WSJF) — avaliada e adiada para uma Fase 2, quando houver um backlog real grande o suficiente para justificá-la.
 - **MVP scope formal e business case** — mesma decisão: adiados até haver um consumidor real desses artefatos.
-- **Escrita/criação no Jira/Confluence** — este agente só lê desses sistemas (`--jira`/`--confluence`); publicar o PRD como página nova ou atualizar um ticket continua exclusivo do Product Owner (`create_confluence_page`/`update_jira_issue`), que já cobre esse caso.
+- **Escrita no Jira / atualização de página existente no Confluence** — este agente escreve só uma coisa (`create_confluence_page`, página nova); atualizar um ticket Jira ou uma página Confluence já existente continua exclusivo do Product Owner (`update_jira_issue`), que já cobre esse caso.
 - **RAG sobre `knowledge/methodology/`** — adiado enquanto o volume de conhecimento couber direto no prompt (ver seção 9).
 - **Resiliência a falhas de infraestrutura do Ollama local** — mesma decisão consciente do Product Owner: reexecutar manualmente em vez de adicionar retry automático, até haver evidência de que o custo de complexidade compensa.
 
 ## 12. Como executar
 
-Ver `README.md`/`README.pt.md` para o passo a passo completo de instalação (Python 3.12+, `uv`, Ollama + modelos, `.env.example` → `.env`) e todos os exemplos de uso do `run.py` (`--modo descoberta`/`visao`/`estrategia`/`prd`/`completo`, `--arquivo`/`--texto`, `--refinar`, `--saida`).
+Ver `README.md`/`README.pt.md` para o passo a passo completo de instalação (Python 3.12+, `uv`, Ollama + modelos, `.env.example` → `.env`) e todos os exemplos de uso do `run.py` (`--modo descoberta`/`visao`/`estrategia`/`prd`/`completo`, `--arquivo`/`--texto`/`--jira`/`--confluence`/`--prd-existente`, `--refinar`, `--saida`, `--publicar-confluence`).
 
 ## 13. Conclusão
 

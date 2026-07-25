@@ -51,6 +51,7 @@ skills:
   - refine_prd
   - format_prd_markdown
   - parse_prd_markdown
+  - create_confluence_page
   - export_markdown
 
 memory:

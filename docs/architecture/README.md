@@ -19,6 +19,8 @@ Os três artefatos com ciclo de aceite formal (Visão, Estratégia, PRD) seguem 
 
 Caso especial só para PRD (`--prd-existente`): a etapa `Generate` é substituída por `parse_prd_markdown` — carrega um PRD `.md` já pronto como `PRDDraft`, preservando a redação original campo a campo, e entra direto em `Validate`. Sem diagrama próprio; é o mesmo pipeline com a primeira etapa trocada.
 
+Depois de `Approve`, o PRD (só ele, não Visão/Estratégia) pode opcionalmente ser publicado como página nova no Confluence (`create_confluence_page`, `--publicar-confluence`), sob uma segunda confirmação humana explícita, distinta do aceite — também sem diagrama próprio.
+
 ## 3 — Fluxo de descoberta
 
 ![Fluxo de descoberta](svg/03-fluxo-descoberta.svg)

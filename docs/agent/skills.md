@@ -2,7 +2,7 @@
 
 > Documentação das skills implementadas em `../../src/aqua_qe_product_manager/skills/`, no formato definido em `../standards/skill_standard.md`. Ordem conforme `agent_manifest.yaml`.
 >
-> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions` e `refine_prd` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd`, `format_prd_markdown` e `parse_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação (`read_jira_issue`/`read_confluence_page` fazem chamada HTTP real ao Jira/Confluence Cloud via `services/jira_service.py`/`services/confluence_service.py`, não ao LLM).
+> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions` e `refine_prd` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd`, `format_prd_markdown` e `parse_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação (`read_jira_issue`/`read_confluence_page` fazem chamada HTTP real ao Jira/Confluence Cloud via `services/jira_service.py`/`services/confluence_service.py`, não ao LLM). `create_confluence_page` também é I/O (chamada HTTP de escrita ao Confluence Cloud), sem LLM — é a única skill deste agente que grava em um sistema externo, e só é chamada pelo CLI após aceitação humana explícita.
 
 ## read_text_file
 
@@ -237,6 +237,15 @@
 - **Efeitos colaterais**: nenhum — Python puro, determinístico.
 - **Erros esperados**: nenhum.
 - **Dependências**: espelha exatamente o formato produzido por `format_prd_markdown` — mudança de estrutura em uma exige atualizar a outra.
+
+## create_confluence_page
+
+- **Descrição**: publica o PRD aceito como uma nova página no Confluence Cloud e retorna a URL da página criada. Converte o Markdown de `format_prd_markdown` para o storage format (XHTML) do Confluence internamente. Só cria página nova — não há skill de atualização de página existente (mesma decisão do AQuA-QE Product Owner: código sem consumidor no CLI não é replicado).
+- **Entrada**: `draft: PRDDraft`, `titulo: str`.
+- **Saída**: `str` (URL da página criada).
+- **Efeitos colaterais**: chamada HTTP `POST` ao Confluence Cloud (`CONFLUENCE_SPACE_KEY`, mesmas credenciais do Jira).
+- **Erros esperados**: credencial ausente (`KeyError` em `os.environ`), espaço inexistente ou sem permissão (HTTP 4xx, propagado via `raise_for_status`).
+- **Dependências**: chamada pelo CLI (`run.py --publicar-confluence`) só após aceitação humana explícita do PRD — nunca automaticamente.
 
 ## export_markdown
 

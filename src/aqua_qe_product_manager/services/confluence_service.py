@@ -1,3 +1,4 @@
+import html
 import os
 from html.parser import HTMLParser
 
@@ -43,6 +44,70 @@ def _storage_para_texto(storage_html: str) -> str:
     parser = _StorageFormatParaTexto()
     parser.feed(storage_html)
     return parser.texto()
+
+
+def _texto_para_storage(texto: str) -> str:
+    """Converte Markdown simples (#/##/### e listas com "- ") no storage format (XHTML) do Confluence.
+
+    Usado para publicar o PRD (produzido por format_prd_markdown), que é
+    sempre Markdown — por isso "# "/"## "/"### " viram h1/h2/h3 e linhas
+    consecutivas com "- " viram uma lista; o restante vira parágrafo, tudo
+    HTML-escapado.
+    """
+    partes: list[str] = []
+    itens_lista: list[str] = []
+
+    def fechar_lista() -> None:
+        if itens_lista:
+            partes.append("<ul>" + "".join(f"<li>{item}</li>" for item in itens_lista) + "</ul>")
+            itens_lista.clear()
+
+    for linha in texto.splitlines():
+        linha = linha.strip()
+        if not linha:
+            continue
+        if linha.startswith("### "):
+            fechar_lista()
+            partes.append(f"<h3>{html.escape(linha[4:])}</h3>")
+        elif linha.startswith("## "):
+            fechar_lista()
+            partes.append(f"<h2>{html.escape(linha[3:])}</h2>")
+        elif linha.startswith("# "):
+            fechar_lista()
+            partes.append(f"<h1>{html.escape(linha[2:])}</h1>")
+        elif linha.startswith("- "):
+            itens_lista.append(html.escape(linha[2:]))
+        else:
+            fechar_lista()
+            partes.append(f"<p>{html.escape(linha)}</p>")
+
+    fechar_lista()
+    return "".join(partes)
+
+
+def create_page(
+    space_key: str, title: str, texto: str, parent_page_id: str | None = None
+) -> str:
+    """Cria uma nova página no Confluence Cloud a partir de texto simples e retorna o id da página criada."""
+    base_url, email, token = _credenciais()
+
+    body: dict = {
+        "type": "page",
+        "title": title,
+        "space": {"key": space_key},
+        "body": {"storage": {"value": _texto_para_storage(texto), "representation": "storage"}},
+    }
+    if parent_page_id:
+        body["ancestors"] = [{"id": parent_page_id}]
+
+    resposta = httpx.post(
+        f"{base_url}/wiki/rest/api/content",
+        auth=(email, token),
+        json=body,
+        timeout=30,
+    )
+    resposta.raise_for_status()
+    return resposta.json()["id"]
 
 
 def get_page_text(page_id: str) -> str:
