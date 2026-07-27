@@ -24,6 +24,8 @@ Idêntico ao checklist do AQuA-QE Product Owner, para preservar compatibilidade 
 - [ ] `functional_requirements` tem ao menos um item.
 - [ ] `success_criteria` tem ao menos um item.
 
+Os 10 campos de profundidade (`personas`, `user_journeys`, `business_objectives`, `use_cases`, `dependencies`, `technical_assumptions`, `constraints`, `glossary`, `candidate_product_metrics`, `mvp_scope`/`future_scope`) são deliberadamente **não** obrigatórios neste checklist — são enriquecimento opcional, não bloqueiam o PRD por estarem vazios (mesmo princípio já aplicado a `components`/`integrations` no AQuA-QE Solution Architect).
+
 ## Regra geral
 
 O checklist automático avalia apenas **presença estrutural**, nunca qualidade de conteúdo — qualidade e coerência ficam a cargo de `review_*` (segundo LLM) e, no fim, do julgamento humano no aceite (ver `acceptance_patterns.md`). Um artefato pode passar no checklist e ainda assim ser reprovado na revisão ou recusado no aceite.

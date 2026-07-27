@@ -34,7 +34,7 @@ Ver `output_schema.md` — problem statement/personas/JTBD/contexto de mercado (
 
 ### PRD já existente
 
-Quando a entrada é `--prd-existente`, o agente pula a geração via LLM inteiramente: `parse_prd_markdown` reconstrói o `PRDDraft` a partir do Markdown, preservando a redação original campo a campo, e o fluxo segue direto para `validate_prd`/`review_prd`/aceite — o mesmo padrão do caminho feliz, só substituindo a etapa "gerar" por "carregar".
+Quando a entrada é `--prd-existente`, o agente pula a geração via LLM inteiramente: `parse_prd_markdown` reconstrói o `PRDDraft` a partir do Markdown, preservando a redação original campo a campo, e o fluxo segue direto para `validate_prd`/`review_prd`/aceite — o mesmo padrão do caminho feliz, só substituindo a etapa "gerar" por "carregar". **Limitação conhecida**: isso vale para os 9 campos centrais; os 10 campos de profundidade (personas, jornadas, objetivos com KPI, casos de uso, dependências, premissas técnicas, restrições, glossário, métricas candidatas, MVP/versão futura) ainda não têm round-trip em `parse_prd_markdown` — voltam vazios ao recarregar, mesmo que o Markdown os contenha (ver `skills.md`).
 
 ### Priorização de requisitos
 

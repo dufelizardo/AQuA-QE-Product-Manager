@@ -14,6 +14,9 @@
 8. **PRD a partir de ideia crua, sem contexto** — `contexto=None`. Esperado: comportamento equivalente ao `--modo prd` atual do AQuA-QE Product Owner (compatibilidade do caminho simples).
 9. **Handoff PM → PO** — `format_prd_markdown` exporta um `prd.md`; esse arquivo é lido com sucesso por `run.py --modo lote --arquivo prd.md` no repositório do Product Owner, sem nenhuma adaptação manual.
 10. **Nenhuma aceitação automática** — em todos os casos acima, `status = accepted` só é setado após uma pergunta explícita respondida pelo usuário no CLI, nunca automaticamente pela lógica do agente.
+11. **Enriquecimento de profundidade do PRD** — texto de entrada rico o suficiente para sustentar personas/jornadas/casos de uso/dependências. Esperado: os 10 campos de profundidade preenchidos, todos rastreáveis ao texto (GR-1), exceto `candidate_product_metrics` (GR-M5, ver caso 12).
+12. **Guardrail GR-M5 (métricas candidatas)** — qualquer texto de entrada. Esperado: `identify_candidate_product_metrics` pode sugerir métricas típicas de mercado mesmo sem citação literal no texto (única exceção deliberada a GR-1), mas sempre no campo `candidate_product_metrics`, nunca mesclado com `success_criteria`; `format_prd_markdown` sempre rotula a seção como "sugeridas, a confirmar".
+13. **Enriquecimento sobrevive ao refinamento** — PRD reprovado, refinado com respostas do usuário. Esperado: os 10 campos de profundidade são re-derivados a partir do PRD já refinado (`refine_prd_draft`), não ficam com valores da geração original quando o conteúdo central mudou.
 
 ## Métricas de acompanhamento
 
