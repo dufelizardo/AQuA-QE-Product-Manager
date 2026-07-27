@@ -23,14 +23,16 @@ Estruturar ideias e problemas de negócio informais em artefatos de descoberta e
 - Estruturar contexto de mercado (concorrentes, tendências) só a partir do que o usuário citou explicitamente — nunca do conhecimento geral do modelo sobre o mercado.
 - Gerar e refinar visão de produto e estratégia de produto, com o mesmo ciclo humano-no-loop (gerar → validar → revisar por segundo LLM → perguntas de esclarecimento → refinar → aceite humano explícito) usado no PRD.
 - Gerar e refinar um PRD, incorporando descoberta/visão/estratégia quando disponíveis, ou funcionando só a partir de uma ideia crua quando não estiverem.
-- Exportar o PRD final em Markdown, no mesmo formato que o AQuA-QE Product Owner já consome como entrada (`prd_standard.md` compartilhado).
-- Priorizar os requisitos funcionais do PRD aceito em MoSCoW (automático, a partir de sinal de linguagem no texto) ou RICE/WSJF (números sempre coletados do usuário, nunca estimados — GR-M4), exportado sempre num arquivo separado do PRD.
+- Enriquecer o PRD com personas (reaproveitadas da descoberta quando existirem), jornadas do usuário, objetivos de negócio com KPI, casos de uso, dependências externas, premissas técnicas, restrições, glossário de domínio e agrupamento MVP vs. versão futura — sempre sob a mesma disciplina GR-1 (nunca inventar, vazio se não sustentado pela fonte).
+- Sugerir métricas de produto candidatas (ex.: MAU, DAU, taxa de abandono) típicas do domínio descrito, sempre claramente rotuladas como sugestão a confirmar — nunca misturadas com `success_criteria`, que continua exigindo evidência textual (GR-M5).
+- Exportar o PRD final em Markdown, no mesmo formato que o AQuA-QE Product Owner já consome como entrada (`prd_standard.md` compartilhado) — as seções originais nunca mudam de nome/ordem; as seções de profundidade só se somam a elas.
+- Priorizar os requisitos funcionais do PRD aceito em MoSCoW (automático, a partir de sinal de linguagem no texto) ou RICE/WSJF (números sempre coletados do usuário, nunca estimados — GR-M4), exportado sempre num arquivo separado do PRD — mecanismo distinto do agrupamento MVP vs. versão futura acima, que faz parte do próprio PRD.
 
 ## Fora de escopo
 
 - Realizar pesquisa de mercado, entrevistas com clientes ou qualquer atividade de coleta de dados do mundo real — o agente só estrutura o que já foi coletado e informado pelo usuário.
 - Priorização Kano — **permanentemente** fora de escopo (não uma questão de fase): depende estruturalmente de dados de pesquisa de satisfação de cliente que não existem no tipo de entrada deste agente (ideia informal/PRD/chat), em nenhuma fase futura.
-- Definição formal de escopo de MVP e business case (ROI/CAC/LTV) — avaliados e deliberadamente adiados para uma fase futura (ver `WHITEPAPER.md`, seção "O que ainda falta").
+- Business case formal (ROI/CAC/LTV) — continua fora de escopo (GR-M2): o agrupamento leve MVP vs. versão futura foi desbloqueado (o usuário já é o consumidor real que faltava), mas projeção financeira/retorno sobre investimento continua exigindo dado que este agente não pode inventar.
 - Comunicação entre times e gestão de stakeholders — são atividades interpessoais, não de geração de documento.
 - Transformar o PRD em Épicos/User Stories — isso é responsabilidade do AQuA-QE Product Owner, que recebe o PRD como entrada.
 - Aprovar definitivamente qualquer artefato sem revisão humana (ver `guardrails.md`).
@@ -46,6 +48,7 @@ Estruturar ideias e problemas de negócio informais em artefatos de descoberta e
 7. Quando a fonte for ambígua ou incompleta, parar e solicitar esclarecimento em vez de gerar uma suposição não sinalizada (ver `guardrails.md`).
 8. Exportar o PRD validado em Markdown, compatível com a entrada esperada pelo AQuA-QE Product Owner.
 9. Priorizar os requisitos funcionais do PRD aceito, em MoSCoW (`classify_moscow`) ou RICE/WSJF (`compute_rice_score`/`compute_wsjf_score`, números sempre coletados do usuário), exportando o resultado num arquivo separado do PRD.
+10. Enriquecer o PRD com personas, jornadas do usuário, objetivos de negócio com KPI, casos de uso, dependências externas, premissas técnicas, restrições, glossário de domínio, métricas de produto candidatas (sempre rotuladas como sugestão) e agrupamento MVP vs. versão futura.
 
 ## Requisitos não funcionais
 

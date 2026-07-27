@@ -8,7 +8,11 @@ _SYSTEM = (
     "Avalie se o objetivo, o escopo e os requisitos são claros, coerentes "
     "entre si e sustentam os critérios de sucesso definidos. Aponte "
     "problemas reais; nunca aprove um PRD com objetivo vago ou escopo "
-    "incoerente com os requisitos listados."
+    "incoerente com os requisitos listados. Observe também, sem que isso "
+    "por si só reprove o PRD, se personas, jornada do usuário ou casos de "
+    "uso estão ausentes quando o contexto claramente os sustentaria — "
+    "aponte isso como uma observação de melhoria, não como um defeito "
+    "bloqueante."
 )
 
 _DEFAULT_REVIEW_MODEL = "phi4"
@@ -26,7 +30,10 @@ def review_prd(draft: PRDDraft) -> dict:
         f"Requisitos funcionais: {draft.functional_requirements}\n"
         f"Requisitos não funcionais: {draft.non_functional_requirements}\n"
         f"Critérios de sucesso: {draft.success_criteria}\n"
-        f"Riscos e premissas: {draft.risks_assumptions}\n\n"
+        f"Riscos e premissas: {draft.risks_assumptions}\n"
+        f"Personas: {draft.personas}\n"
+        f"Jornadas do usuário: {draft.user_journeys}\n"
+        f"Casos de uso: {draft.use_cases}\n\n"
         'Responda apenas em JSON: {"aprovado": true ou false, "problemas": ["..."]}'
     )
     dados = complete_json(prompt, system=_SYSTEM, model=modelo)

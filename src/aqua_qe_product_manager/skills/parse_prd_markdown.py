@@ -21,12 +21,23 @@ _CAMPOS_LISTA = {
     "risks_assumptions",
 }
 
+# format_prd_markdown numera "Requisitos funcionais"/"Requisitos não funcionais" como
+# "RF-001: texto"/"RNF-001: texto" só na exportação — o prefixo precisa ser removido aqui
+# para restaurar o texto original do requisito, não o texto numerado.
+_CAMPOS_NUMERADOS = {
+    "functional_requirements": re.compile(r"^RF-\d+: "),
+    "non_functional_requirements": re.compile(r"^RNF-\d+: "),
+}
 
-def _para_lista(texto: str) -> list[str]:
+
+def _para_lista(texto: str, prefixo_numerado: re.Pattern | None = None) -> list[str]:
     linhas = [linha.strip() for linha in texto.splitlines() if linha.strip()]
     if not linhas or linhas == ["(nenhum)"]:
         return []
-    return [linha[2:] if linha.startswith("- ") else linha for linha in linhas]
+    itens = [linha[2:] if linha.startswith("- ") else linha for linha in linhas]
+    if prefixo_numerado:
+        itens = [prefixo_numerado.sub("", item) for item in itens]
+    return itens
 
 
 def parse_prd_markdown(texto: str) -> PRDDraft:
@@ -45,7 +56,7 @@ def parse_prd_markdown(texto: str) -> PRDDraft:
         if not campo:
             continue
         if campo in _CAMPOS_LISTA:
-            setattr(draft, campo, _para_lista(conteudo))
+            setattr(draft, campo, _para_lista(conteudo, _CAMPOS_NUMERADOS.get(campo)))
         else:
             setattr(draft, campo, conteudo.strip())
     return draft

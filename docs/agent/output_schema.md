@@ -73,7 +73,7 @@ Todos os campos são opcionais (string ou lista vazia quando não identificável
 
 ## Schema de PRD
 
-Gerado por `generate_prd`, opcionalmente incorporando descoberta/visão/estratégia via `contexto`. **Mesmos campos exatos do `PRDDraft` do AQuA-QE Product Owner** — garante que o PRD exportado por este agente seja consumível pelo `--modo lote` do Product Owner sem nenhuma adaptação:
+Gerado por `generate_prd` (9 campos centrais) e enriquecido em seguida por `identify_user_journeys`/`identify_business_objectives`/`identify_use_cases`/`identify_external_dependencies`/`identify_technical_assumptions`/`identify_constraints`/`identify_prd_glossary`/`identify_candidate_product_metrics`/`identify_mvp_scope` (10 campos de profundidade), opcionalmente incorporando descoberta/visão/estratégia via `contexto`. Os 9 campos centrais são exportados por `format_prd_markdown` no mesmo formato que o AQuA-QE Product Owner já sabe interpretar via `--modo lote` (texto livre, não deserialização estruturada) — os campos de profundidade só adicionam seções ao Markdown exportado, sem alterar as 9 originais:
 
 ```
 {
@@ -86,6 +86,25 @@ Gerado por `generate_prd`, opcionalmente incorporando descoberta/visão/estraté
   "non_functional_requirements": ["<string>"],
   "success_criteria": ["<string>"],
   "risks_assumptions": ["<string>"],
+  "personas": [
+    {"name": "<string>", "description": "<string>", "goals": ["<string>"], "pain_points": ["<string>"], "source_reference": "<string>"}
+  ],
+  "user_journeys": [
+    {"name": "<string>", "steps": ["<string>"], "source_reference": "<string>"}
+  ],
+  "business_objectives": [
+    {"objective": "<string>", "kpi": "<string, reestruturado de objective/success_criteria — nunca uma meta inventada>"}
+  ],
+  "use_cases": ["<string, 'Ator + ação'>"],
+  "dependencies": ["<string, sistema externo — nunca assumido sem evidência>"],
+  "technical_assumptions": ["<string>"],
+  "constraints": ["<string>"],
+  "glossary": [
+    {"term": "<string>", "definition": "<string>"}
+  ],
+  "candidate_product_metrics": ["<string, SEMPRE sugestão a confirmar — GR-M5, nunca fato como success_criteria>"],
+  "mvp_scope": ["<string, subconjunto de functional_requirements>"],
+  "future_scope": ["<string, subconjunto de functional_requirements>"],
   "status": "draft_validated | pending_clarification | accepted",
   "review_notes": ["<string>"]
 }
@@ -93,7 +112,7 @@ Gerado por `generate_prd`, opcionalmente incorporando descoberta/visão/estraté
 
 ## Schema de priorização
 
-Gerado por `classify_moscow` (MoSCoW) ou pelo cálculo interativo de RICE/WSJF (`compute_rice_score`/`compute_wsjf_score`), sempre a partir dos `functional_requirements` de um PRD já aceito. **Deliberadamente fora de `PRDDraft`** — nunca mesclado no `prd.md` exportado, sempre um arquivo separado (`--saida-priorizacao`), para preservar o contrato de handoff byte-idêntico ao `PRDDraft` do Product Owner:
+Gerado por `classify_moscow` (MoSCoW) ou pelo cálculo interativo de RICE/WSJF (`compute_rice_score`/`compute_wsjf_score`), sempre a partir dos `functional_requirements` de um PRD já aceito. **Deliberadamente fora de `PRDDraft`** — nunca mesclado no `prd.md` exportado, sempre um arquivo separado (`--saida-priorizacao`). Mecanismo distinto de `mvp_scope`/`future_scope` (que fazem parte do próprio `PRDDraft`, seção anterior) — MoSCoW/RICE/WSJF classificam individualmente e servem à priorização granular do backlog; `mvp_scope`/`future_scope` são um agrupamento mais leve, direto no PRD, para uma primeira leitura de "o que entra na v1":
 
 ```
 {

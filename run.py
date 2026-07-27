@@ -238,6 +238,17 @@ def _imprimir_prd(draft: PRDDraft) -> None:
     print(f"objetivo: {draft.objective}")
     print(f"escopo: {draft.scope}")
     print(f"requisitos funcionais: {len(draft.functional_requirements)}")
+    print(f"personas: {len(draft.personas)}")
+    print(f"jornadas do usuário: {len(draft.user_journeys)}")
+    print(f"objetivos de negócio (KPI): {len(draft.business_objectives)}")
+    print(f"casos de uso: {len(draft.use_cases)}")
+    print(f"dependências: {draft.dependencies}")
+    print(f"premissas técnicas: {len(draft.technical_assumptions)}")
+    print(f"restrições: {len(draft.constraints)}")
+    print(f"glossário: {len(draft.glossary)}")
+    print(f"métricas de produto candidatas (sugeridas, a confirmar): {draft.candidate_product_metrics}")
+    print(f"MVP: {draft.mvp_scope}")
+    print(f"versão futura: {draft.future_scope}")
     if draft.review_notes:
         print("observações da revisão:")
         for nota in draft.review_notes:

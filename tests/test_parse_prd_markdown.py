@@ -71,3 +71,25 @@ def test_cabecalho_desconhecido_e_ignorado():
     draft = parse_prd_markdown(texto)
 
     assert draft.context_problem == "contexto"
+
+
+def test_round_trip_remove_prefixo_numerado_de_rf_rnf():
+    """format_prd_markdown numera RF-001/RNF-001 só na exportação; parse_prd_markdown deve restaurar o texto original, sem o prefixo."""
+    original = _draft_completo()
+
+    reconstruido = parse_prd_markdown(format_prd_markdown(original))
+
+    assert reconstruido.functional_requirements == ["requisito 1", "requisito 2"]
+    assert reconstruido.non_functional_requirements == ["nao funcional 1"]
+
+
+def test_secoes_de_profundidade_ainda_nao_fazem_round_trip():
+    """Limitação conhecida: personas/jornadas/etc. não têm mapeamento em _SECAO_PARA_CAMPO ainda — voltam vazias."""
+    from aqua_qe_product_manager.models import Persona
+
+    original = _draft_completo()
+    original.personas = [Persona(name="Paciente", description="usa o app")]
+
+    reconstruido = parse_prd_markdown(format_prd_markdown(original))
+
+    assert reconstruido.personas == []

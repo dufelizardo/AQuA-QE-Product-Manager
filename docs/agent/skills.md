@@ -2,7 +2,7 @@
 
 > Documentação das skills implementadas em `../../src/aqua_qe_product_manager/skills/`, no formato definido em `../standards/skill_standard.md`. Ordem conforme `agent_manifest.yaml`.
 >
-> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions` e `refine_prd` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd`, `format_prd_markdown` e `parse_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação (`read_jira_issue`/`read_confluence_page` fazem chamada HTTP real ao Jira/Confluence Cloud via `services/jira_service.py`/`services/confluence_service.py`, não ao LLM). `create_confluence_page`/`update_confluence_page` também são I/O (chamada HTTP de escrita ao Confluence Cloud), sem LLM — as únicas skills deste agente que gravam em um sistema externo, e só são chamadas pelo CLI após aceitação humana explícita. `classify_moscow` usa o LLM gerador (categórica, segue GR-1). `validate_moscow_classification`, `compute_rice_score` e `compute_wsjf_score` são Python puro, sem LLM — os dois últimos nunca recebem um número estimado pelo agente (GR-M4).
+> `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context`, `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision`, `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy`, `generate_prd`, `generate_prd_clarifying_questions`, `refine_prd`, `identify_user_journeys`, `identify_business_objectives`, `identify_use_cases`, `identify_external_dependencies`, `identify_technical_assumptions`, `identify_constraints`, `identify_prd_glossary`, `identify_candidate_product_metrics` e `identify_mvp_scope` usam um LLM local via Ollama (`../../src/aqua_qe_product_manager/services/llm_service.py`, modelo configurável por `OLLAMA_MODEL`, padrão `mistral`). `validate_product_vision`, `validate_product_strategy`, `validate_prd`, `format_prd_markdown` e `parse_prd_markdown` são Python puro, sem LLM. `review_product_vision`, `review_product_strategy` e `review_prd` usam um segundo LLM, diferente do gerador (`OLLAMA_REVIEW_MODEL`, padrão `phi4`), como revisor independente (LLM-como-juiz). `read_text_file`, `read_jira_issue`, `read_confluence_page`, `parse_chat_transcript`, `format_chat_transcript` e `export_markdown` são Python puro, de I/O/formatação (`read_jira_issue`/`read_confluence_page` fazem chamada HTTP real ao Jira/Confluence Cloud via `services/jira_service.py`/`services/confluence_service.py`, não ao LLM). `create_confluence_page`/`update_confluence_page` também são I/O (chamada HTTP de escrita ao Confluence Cloud), sem LLM — as únicas skills deste agente que gravam em um sistema externo, e só são chamadas pelo CLI após aceitação humana explícita. `classify_moscow` usa o LLM gerador (categórica, segue GR-1). `validate_moscow_classification`, `compute_rice_score` e `compute_wsjf_score` são Python puro, sem LLM — os dois últimos nunca recebem um número estimado pelo agente (GR-M4).
 
 ## read_text_file
 
@@ -220,9 +220,90 @@
 - **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
 - **Dependências**: chamada pelo ciclo de refinamento do CLI.
 
+## identify_user_journeys
+
+- **Descrição**: identifica jornadas do usuário (passo a passo de um fluxo relevante, ex.: agendamento) sustentadas pelo texto de entrada. Nunca inventa um passo que não decorra do escopo/requisitos descritos.
+- **Entrada**: `texto: str`.
+- **Saída**: `list[UserJourney]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: nenhuma.
+
+## identify_business_objectives
+
+- **Descrição**: reestrutura `objective`/`success_criteria` já aceitos em pares objetivo-de-negócio → KPI explícitos. Nunca inventa uma meta numérica que não decorra deles.
+- **Entrada**: `objetivo: str`, `criterios_sucesso: list[str]`.
+- **Saída**: `list[BusinessObjective]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: consome `objective`/`success_criteria` de um `PRDDraft` já gerado.
+
+## identify_use_cases
+
+- **Descrição**: identifica casos de uso de alto nível (ator + ação, ex.: "Paciente agenda consulta") sustentados pelo escopo/requisitos descritos.
+- **Entrada**: `texto: str`.
+- **Saída**: `list[str]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: nenhuma.
+
+## identify_external_dependencies
+
+- **Descrição**: identifica dependências de sistemas externos (ex.: sistemas governamentais, autenticação, notificação) citadas ou claramente inferíveis no texto. Nome distinto do `identify_dependencies` do AQuA-QE Product Owner, que trata de um conceito diferente (dependência requisito-a-requisito, não sistema externo).
+- **Entrada**: `texto: str`.
+- **Saída**: `list[str]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: nenhuma.
+
+## identify_technical_assumptions
+
+- **Descrição**: identifica premissas técnicas (ex.: infraestrutura disponível, equipamento existente) citadas ou implícitas no texto.
+- **Entrada**: `texto: str`.
+- **Saída**: `list[str]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: nenhuma.
+
+## identify_constraints
+
+- **Descrição**: identifica restrições do projeto (ex.: orçamento, prazo, legislação) citadas ou implícitas no texto.
+- **Entrada**: `texto: str`.
+- **Saída**: `list[str]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: nenhuma.
+
+## identify_prd_glossary
+
+- **Descrição**: identifica termos de domínio específicos deste PRD (ex.: "Unidade", "Paciente") — distinto do glossário conceitual da plataforma (`knowledge/glossary/glossario.md`).
+- **Entrada**: `texto: str`.
+- **Saída**: `list[GlossaryTerm]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: nenhuma.
+
+## identify_candidate_product_metrics
+
+- **Descrição**: sugere métricas de produto típicas do domínio descrito (ex.: MAU, DAU, taxa de abandono) — sempre como recomendação a confirmar, nunca como fato (GR-M5/RULE-M5). Único ponto do agente onde conhecimento geral do modelo é intencionalmente permitido, precisamente porque a saída nunca é apresentada como evidenciada.
+- **Entrada**: `texto: str`.
+- **Saída**: `list[str]`.
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: nenhuma.
+
+## identify_mvp_scope
+
+- **Descrição**: agrupa os requisitos funcionais já existentes em MVP vs. versão futura, com base em sinal de linguagem explícito no texto de origem — mecanismo mais leve e distinto do `--priorizar` (MoSCoW/RICE/WSJF), que classifica individualmente e exporta em arquivo separado.
+- **Entrada**: `requisitos_funcionais: list[str]`, `texto: str`.
+- **Saída**: `tuple[list[str], list[str]]` (mvp, versão futura).
+- **Efeitos colaterais**: chamada ao LLM local.
+- **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
+- **Dependências**: consome `functional_requirements` de um `PRDDraft` já gerado.
+
 ## format_prd_markdown
 
-- **Descrição**: formata o PRD em Markdown, mesma estrutura de `../standards/prd_standard.md` — o texto resultante é diretamente consumível pelo AQuA-QE Product Owner (`--modo lote --arquivo`).
+- **Descrição**: formata o PRD em Markdown, mesma estrutura de `../standards/prd_standard.md` — o texto resultante é diretamente consumível pelo AQuA-QE Product Owner (`--modo lote --arquivo`). As seções de profundidade (personas, jornadas, objetivos com KPI, casos de uso, MVP/versão futura, dependências, premissas técnicas, restrições, glossário, métricas candidatas) são adições — as 9 seções originais mantêm texto/ordem. Requisitos funcionais/não funcionais são numerados (`RF-001`/`RNF-001`) só na exportação.
 - **Entrada**: `draft: PRDDraft`.
 - **Saída**: `str`.
 - **Efeitos colaterais**: nenhum — Python puro.
@@ -231,7 +312,7 @@
 
 ## parse_prd_markdown
 
-- **Descrição**: inverso de `format_prd_markdown` — reconstrói um `PRDDraft` a partir de um Markdown já existente (mesma estrutura de seções), preservando a redação original campo a campo. Usado por `--modo prd --prd-existente` para carregar um PRD pronto e refiná-lo de verdade, em vez de o LLM reescrever tudo do zero a partir do texto. Seção ausente ou não reconhecida fica com o default vazio do dataclass — nunca lança exceção, nunca inventa conteúdo.
+- **Descrição**: inverso de `format_prd_markdown` — reconstrói um `PRDDraft` a partir de um Markdown já existente (mesma estrutura de seções), preservando a redação original campo a campo. Usado por `--modo prd --prd-existente` para carregar um PRD pronto e refiná-lo de verdade, em vez de o LLM reescrever tudo do zero a partir do texto. Seção ausente ou não reconhecida fica com o default vazio do dataclass — nunca lança exceção, nunca inventa conteúdo. Remove o prefixo `RF-XXX:`/`RNF-XXX:` ao reconstruir requisitos funcionais/não funcionais (a numeração é só de exportação). **Limitação conhecida**: as seções de profundidade adicionadas nesta leva (personas, jornadas, objetivos com KPI, casos de uso, dependências, premissas técnicas, restrições, glossário, métricas candidatas, MVP/versão futura) ainda não têm mapeamento em `_SECAO_PARA_CAMPO` — ao recarregar um PRD existente, essas seções voltam vazias/default, mesmo que o Markdown as contenha. Round-trip completo delas fica para um incremento futuro.
 - **Entrada**: `texto: str`.
 - **Saída**: `PRDDraft` (com `status` no default `pending_clarification` — ainda não validado/revisado nesta sessão).
 - **Efeitos colaterais**: nenhum — Python puro, determinístico.

@@ -4,8 +4,8 @@
 
 ## RULE-001
 
-- **Descrição**: nunca incluir problem statement, persona, JTBD, meta estratégica ou requisito de PRD sem origem identificável na fonte de entrada.
-- **Gatilho**: geração de qualquer campo por `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `generate_product_vision`, `generate_product_strategy` ou `generate_prd`.
+- **Descrição**: nunca incluir problem statement, persona, JTBD, meta estratégica, requisito de PRD, jornada do usuário, caso de uso, dependência externa, premissa técnica, restrição ou termo de glossário sem origem identificável na fonte de entrada.
+- **Gatilho**: geração de qualquer campo por `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `generate_product_vision`, `generate_product_strategy`, `generate_prd`, `identify_user_journeys`, `identify_use_cases`, `identify_external_dependencies`, `identify_technical_assumptions`, `identify_constraints` ou `identify_prd_glossary`.
 - **Ação esperada**: se a origem não for identificável, não preencher o campo — acionar RULE-004.
 - **Severidade**: bloqueante.
 - **Origem**: GR-1 (`guardrails.md`).
@@ -33,6 +33,14 @@
 - **Ação esperada**: coletar cada valor via prompt interativo no CLI; `compute_rice_score`/`compute_wsjf_score` só fazem o cálculo aritmético, nunca uma chamada ao LLM.
 - **Severidade**: bloqueante.
 - **Origem**: GR-M4 (`guardrails.md`).
+
+## RULE-M5
+
+- **Descrição**: métricas de produto sugeridas por `identify_candidate_product_metrics` nunca são apresentadas como já definidas/medidas — sempre em campo próprio (`candidate_product_metrics`), rotuladas explicitamente como sugestão a confirmar.
+- **Gatilho**: `identify_candidate_product_metrics`.
+- **Ação esperada**: nunca mesclar essas métricas em `success_criteria`; a exportação (`format_prd_markdown`) sempre rotula a seção como "sugeridas, a confirmar".
+- **Severidade**: bloqueante.
+- **Origem**: GR-M5 (`guardrails.md`).
 
 ## RULE-002
 
@@ -76,4 +84,4 @@
 
 ## Resolução de conflitos
 
-RULE-001, RULE-M1, RULE-M2, RULE-M3, RULE-002, RULE-004 e RULE-005 são bloqueantes e têm prioridade sobre RULE-006 e RULE-007 (recomendações). Nenhuma regra bloqueante pode ser contornada para acelerar a entrega.
+RULE-001, RULE-M1, RULE-M2, RULE-M3, RULE-M5, RULE-002, RULE-004 e RULE-005 são bloqueantes e têm prioridade sobre RULE-006 e RULE-007 (recomendações). Nenhuma regra bloqueante pode ser contornada para acelerar a entrega.

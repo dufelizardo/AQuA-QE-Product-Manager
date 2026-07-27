@@ -12,6 +12,24 @@ def _draft_valido() -> PRDDraft:
     )
 
 
+def _mock_enriquecimento(monkeypatch):
+    """Mocka as 9 skills de profundidade chamadas por _enriquecer_prd, para os testes de workflow não dependerem delas."""
+    monkeypatch.setattr(workflow_module, "synthesize_personas", lambda texto: [])
+    monkeypatch.setattr(workflow_module, "identify_user_journeys", lambda texto: [])
+    monkeypatch.setattr(
+        workflow_module, "identify_business_objectives", lambda objetivo, criterios: []
+    )
+    monkeypatch.setattr(workflow_module, "identify_use_cases", lambda texto: [])
+    monkeypatch.setattr(workflow_module, "identify_external_dependencies", lambda texto: [])
+    monkeypatch.setattr(workflow_module, "identify_technical_assumptions", lambda texto: [])
+    monkeypatch.setattr(workflow_module, "identify_constraints", lambda texto: [])
+    monkeypatch.setattr(workflow_module, "identify_prd_glossary", lambda texto: [])
+    monkeypatch.setattr(workflow_module, "identify_candidate_product_metrics", lambda texto: [])
+    monkeypatch.setattr(
+        workflow_module, "identify_mvp_scope", lambda requisitos, texto: ([], [])
+    )
+
+
 def test_finalize_prd_marca_pending_clarification_quando_validate_falha(monkeypatch):
     monkeypatch.setattr(workflow_module, "validate_prd", lambda draft: False)
 
@@ -46,6 +64,7 @@ def test_finalize_prd_marca_draft_validated_quando_review_aprova(monkeypatch):
 
 
 def test_generate_prd_draft_gera_e_finaliza(monkeypatch):
+    _mock_enriquecimento(monkeypatch)
     monkeypatch.setattr(
         workflow_module, "generate_prd", lambda ideia, contexto=None: _draft_valido()
     )
@@ -61,6 +80,7 @@ def test_generate_prd_draft_gera_e_finaliza(monkeypatch):
 
 
 def test_generate_prd_draft_aceita_contexto_opcional(monkeypatch):
+    _mock_enriquecimento(monkeypatch)
     capturado = {}
 
     def fake_generate_prd(ideia, contexto=None):
@@ -78,7 +98,35 @@ def test_generate_prd_draft_aceita_contexto_opcional(monkeypatch):
     assert capturado["contexto"] == {"vision_statement": "s"}
 
 
+def test_generate_prd_draft_reaproveita_personas_da_descoberta(monkeypatch):
+    """Se contexto ja tem personas (da fase de descoberta), nao chama synthesize_personas de novo."""
+    chamou_synthesize = {"valor": False}
+
+    def fake_synthesize(texto):
+        chamou_synthesize["valor"] = True
+        return []
+
+    _mock_enriquecimento(monkeypatch)
+    monkeypatch.setattr(workflow_module, "synthesize_personas", fake_synthesize)
+    monkeypatch.setattr(
+        workflow_module, "generate_prd", lambda ideia, contexto=None: _draft_valido()
+    )
+    monkeypatch.setattr(workflow_module, "validate_prd", lambda draft: True)
+    monkeypatch.setattr(
+        workflow_module, "review_prd", lambda draft: {"aprovado": True, "problemas": []}
+    )
+
+    draft = workflow_module.generate_prd_draft(
+        "uma ideia qualquer", {"personas": ["persona da descoberta"]}
+    )
+
+    assert chamou_synthesize["valor"] is False
+    assert draft.personas == ["persona da descoberta"]
+
+
 def test_refine_prd_draft_refina_e_finaliza(monkeypatch):
+    _mock_enriquecimento(monkeypatch)
+
     def fake_refine_prd(draft, respostas):
         draft.objective = "objetivo refinado"
         return draft

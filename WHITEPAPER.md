@@ -88,7 +88,8 @@ Skills com LLM gerador (`OLLAMA_MODEL`, padrão `mistral`):
 - `identify_problem_statement`, `synthesize_personas`, `extract_jobs_to_be_done`, `extract_market_context` (descoberta).
 - `generate_product_vision`, `generate_vision_clarifying_questions`, `refine_product_vision` (visão).
 - `generate_product_strategy`, `generate_strategy_clarifying_questions`, `refine_product_strategy` (estratégia).
-- `generate_prd`, `generate_prd_clarifying_questions`, `refine_prd` (PRD).
+- `generate_prd`, `generate_prd_clarifying_questions`, `refine_prd` (PRD — 9 campos centrais).
+- `identify_user_journeys`, `identify_business_objectives`, `identify_use_cases`, `identify_external_dependencies`, `identify_technical_assumptions`, `identify_constraints`, `identify_prd_glossary`, `identify_candidate_product_metrics`, `identify_mvp_scope` (PRD — 10 campos de profundidade, seção 5.1).
 - `classify_moscow` — classifica os requisitos funcionais do PRD aceito em MoSCoW, a partir de sinal de linguagem explícito no texto (categórico, segue GR-1 normalmente — o risco de invenção numérica de RICE/WSJF não se aplica aqui).
 
 Skills com LLM revisor independente (`OLLAMA_REVIEW_MODEL`, padrão `phi4` — deliberadamente um modelo diferente do gerador, para mitigar *self-preference bias*):
@@ -96,6 +97,10 @@ Skills com LLM revisor independente (`OLLAMA_REVIEW_MODEL`, padrão `phi4` — d
 - `review_product_vision`, `review_product_strategy`, `review_prd`.
 
 Detalhamento completo de entrada/saída/erros de cada skill em `docs/agent/skills.md`.
+
+### 5.1 Profundidade do PRD
+
+Uma revisão de um PRD real gerado por este agente (por um Product Manager sênior) apontou 12 lacunas de profundidade frente a um PRD maduro de mercado. A causa raiz da maioria: infraestrutura que já existia (personas, sintetizadas na descoberta) mas nunca chegava ao PRD, e conceitos (jornada, casos de uso, dependências, premissas, restrições, glossário, KPIs, numeração RF/RNF) que simplesmente não tinham skill/campo nenhum. As 9 skills de `identify_*` acima cobrem essas lacunas, todas sob a mesma disciplina GR-1 (nunca inventar, vazio se não sustentado pela fonte) — com uma única exceção deliberada: `identify_candidate_product_metrics` (GR-M5) sugere métricas típicas de mercado para o domínio descrito, sempre em campo próprio e claramente rotulada como sugestão a confirmar, nunca misturada com `success_criteria` (que continua evidence-only). O agrupamento MVP vs. versão futura (`identify_mvp_scope`) é a versão **leve** do item "MVP scope formal e business case", que estava deliberadamente adiado (seção 11) até existir um consumidor real — o próprio Product Manager que revisou o PRD é esse consumidor.
 
 ## 6. O ciclo de refinamento interativo (herdado do Product Owner)
 
@@ -155,7 +160,7 @@ A avaliação do agente em produção combina três camadas que nunca se substit
 ## 11. O que ainda falta (deliberadamente adiado, não esquecido)
 
 - **Priorização Kano** — **permanentemente** fora de escopo, não uma questão de fase: depende estruturalmente de dados de pesquisa de satisfação de cliente ausentes do tipo de entrada deste agente. MoSCoW/RICE/WSJF já estão implementados (`--priorizar`, seção 8).
-- **MVP scope formal e business case** — avaliados e deliberadamente adiados para uma Fase 2, até haver um consumidor real desses artefatos.
+- **Business case formal (ROI/CAC/LTV)** — continua fora de escopo (GR-M2): exige projeção financeira que este agente não pode inventar. O agrupamento leve MVP vs. versão futura (`mvp_scope`/`future_scope`, seção 5.1) já foi desbloqueado — era a parte mais simples do que estava adiado aqui, e o consumidor real que faltava já existe.
 - **Escrita no Jira** — este agente só lê tickets Jira; criar ou atualizar um ticket continua exclusivo do Product Owner (`create_jira_story`/`update_jira_issue`), que já cobre esse caso.
 - **RAG sobre `knowledge/methodology/`** — adiado enquanto o volume de conhecimento couber direto no prompt (ver seção 9).
 - **Resiliência a falhas de infraestrutura do Ollama local** — mesma decisão consciente do Product Owner: reexecutar manualmente em vez de adicionar retry automático, até haver evidência de que o custo de complexidade compensa.

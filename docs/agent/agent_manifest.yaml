@@ -46,6 +46,15 @@ skills:
   - generate_strategy_clarifying_questions
   - refine_product_strategy
   - generate_prd
+  - identify_user_journeys
+  - identify_business_objectives
+  - identify_use_cases
+  - identify_external_dependencies
+  - identify_technical_assumptions
+  - identify_constraints
+  - identify_prd_glossary
+  - identify_candidate_product_metrics
+  - identify_mvp_scope
   - validate_prd
   - review_prd
   - generate_prd_clarifying_questions
