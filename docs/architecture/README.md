@@ -3,13 +3,13 @@
 Representação visual da arquitetura e dos fluxos do agente, complementando a documentação em prosa de `../agent/system_design.md`, `../agent/agent_design.md`, `../agent/skills.md` e `../../WHITEPAPER.md`.
 
 - **Fonte editável**: [`architecture.drawio`](architecture.drawio) — arquivo único, 5 páginas, abra em [app.diagrams.net](https://app.diagrams.net) ou na extensão "Draw.io Integration" do VS Code.
-- **Espelho estático**: `svg/*.svg` — mesmo conteúdo de cada página, visível diretamente aqui no GitHub/VS Code, sem precisar abrir o draw.io. **Pendente**: os SVGs ainda refletem a versão anterior do `.drawio` — precisam ser reexportados (abrir o arquivo no draw.io, exportar cada página como SVG, sobrescrever os arquivos correspondentes em `svg/`).
+- **Espelho estático**: `svg/*.svg` — mesmo conteúdo de cada página, visível diretamente aqui no GitHub/VS Code, sem precisar abrir o draw.io. Gerados por um conversor Python próprio (`.drawio` → SVG, interpretando containers/formas/arestas do mxGraph), não por exportação oficial do app draw.io — em caso de dúvida sobre fidelidade visual, o `.drawio` é a fonte de verdade; abra-o diretamente para conferir.
 
 ## 1 — Arquitetura em camadas
 
 ![Arquitetura em camadas](svg/01-arquitetura-camadas.svg)
 
-Da entrada (`.txt`/Markdown/chat/Jira/Confluence) até o provedor de LLM ativo (Ollama local por padrão; piloto opcional de NVIDIA NIM via `LLM_PROVIDER=nvidia`, ver `../agent/system_design.md`) e, para leitura, Jira/Confluence Cloud, passando por CLI, orquestrador, workflows, skills, models e services. O nó do `.drawio` já foi atualizado para citar o toggle NVIDIA NIM; falta só reexportar o SVG desta página (pendência já registrada acima).
+Da entrada (`.txt`/Markdown/chat/Jira/Confluence) até o provedor de LLM ativo (Ollama local por padrão; piloto opcional de NVIDIA NIM via `LLM_PROVIDER=nvidia`, ver `../agent/system_design.md`) e, para leitura, Jira/Confluence Cloud, passando por CLI, orquestrador, workflows, skills, models e services.
 
 ## 2 — Fluxo por artefato (Visão, Estratégia ou PRD)
 
