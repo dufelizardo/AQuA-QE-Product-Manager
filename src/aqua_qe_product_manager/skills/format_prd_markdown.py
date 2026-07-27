@@ -11,6 +11,11 @@ def _lista_numerada_md(itens: list[str], prefixo: str) -> str:
     return "\n".join(f"- {prefixo}-{i + 1:03d}: {item}" for i, item in enumerate(itens))
 
 
+def _lista_inline(itens: list[str]) -> str:
+    """Junta os itens numa única linha (evita embutir uma lista já formatada dentro de um item de outra lista — Markdown aninhado inválido, ver issue #8)."""
+    return "; ".join(itens) if itens else "(nenhum)"
+
+
 def _personas_md(personas: list) -> str:
     if not personas:
         return "(nenhuma)"
@@ -20,8 +25,8 @@ def _personas_md(personas: list) -> str:
             f"### {persona.name}",
             "",
             f"- Descrição: {persona.description}",
-            f"- Objetivos: {_lista_md(persona.goals)}",
-            f"- Pontos de dor: {_lista_md(persona.pain_points)}",
+            f"- Objetivos: {_lista_inline(persona.goals)}",
+            f"- Pontos de dor: {_lista_inline(persona.pain_points)}",
             "",
         ]
     return "\n".join(linhas).rstrip()

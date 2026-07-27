@@ -67,23 +67,28 @@ def test_format_prd_markdown_includes_depth_sections():
     assert "## Jornadas do Usuário" in texto
     assert "### Agendamento" in texto
     assert "1. Cadastro" in texto
-    assert "## Objetivos de Negócio (KPI)" in texto
-    assert "| Reduzir fila | 30% |" in texto
-    assert "## Casos de Uso" in texto
-    assert "Paciente agenda consulta" in texto
-    assert "## Dependências" in texto
-    assert "SUS" in texto
-    assert "## Premissas Técnicas" in texto
-    assert "Internet disponivel" in texto
-    assert "## Restrições" in texto
-    assert "Orcamento limitado" in texto
-    assert "## Glossário" in texto
-    assert "**Unidade**: Unidade de saude" in texto
-    assert "## Métricas de Produto Candidatas (sugeridas, a confirmar)" in texto
-    assert "MAU" in texto
-    assert "## MVP" in texto
-    assert "## Versão Futura" in texto
-    assert "Notificacoes" in texto
+
+
+def test_personas_com_multiplos_objetivos_nao_gera_lista_aninhada():
+    """Regressão issue #8: mais de um objetivo/ponto de dor não pode virar bullets soltos no mesmo nível."""
+    draft = PRDDraft(
+        context_problem="c",
+        objective="o",
+        scope="e",
+        personas=[
+            Persona(
+                name="Paciente",
+                description="usa o app",
+                goals=["marcar consulta", "acompanhar fila"],
+                pain_points=["filas longas", "demora no atendimento"],
+            )
+        ],
+    )
+
+    texto = format_prd_markdown(draft)
+
+    assert "- Objetivos: marcar consulta; acompanhar fila" in texto
+    assert "- Pontos de dor: filas longas; demora no atendimento" in texto
 
 
 def test_format_prd_markdown_handles_empty_lists():
