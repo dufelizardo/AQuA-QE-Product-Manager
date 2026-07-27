@@ -6,9 +6,27 @@ from openai import OpenAI
 
 _DEFAULT_MODEL = "mistral"
 _DEFAULT_REVIEW_MODEL = "phi4"
-_DEFAULT_NVIDIA_MODEL = "mistralai/mixtral-8x22b-instruct-v0.1"
-_DEFAULT_NVIDIA_REVIEW_MODEL = "meta/llama-3.1-70b-instruct"
+_DEFAULT_NVIDIA_MODEL = "deepseek-ai/deepseek-v4-flash"
+_DEFAULT_NVIDIA_REVIEW_MODEL = "meta/llama-3.3-70b-instruct"
 _NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+# Parâmetros de sampling recomendados pela NVIDIA para cada modelo NIM piloto
+# (build.nvidia.com/playground) — chaveados por nome do modelo, não por papel
+# (gerador/revisor), para continuar corretos se um dos dois for trocado via
+# NVIDIA_MODEL/NVIDIA_REVIEW_MODEL. Modelo sem entrada aqui usa a chamada sem
+# parâmetros extras (só model/messages/response_format).
+_NVIDIA_MODEL_PARAMS: dict[str, dict] = {
+    "deepseek-ai/deepseek-v4-flash": {
+        "temperature": 1,
+        "top_p": 0.95,
+        "max_tokens": 16384,
+        "extra_body": {"chat_template_kwargs": {"thinking": True, "reasoning_effort": "high"}},
+    },
+}
+
+
+def _nvidia_params(modelo: str) -> dict:
+    return dict(_NVIDIA_MODEL_PARAMS.get(modelo, {}))
 
 
 def _provider() -> str:
@@ -40,7 +58,9 @@ def reviewer_model() -> str:
 
 def _chat(modelo: str, messages: list[dict], json_mode: bool) -> str:
     if _provider() == "nvidia":
-        kwargs = {"response_format": {"type": "json_object"}} if json_mode else {}
+        kwargs = _nvidia_params(modelo)
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
         resposta = _nvidia_client().chat.completions.create(
             model=modelo, messages=messages, **kwargs
         )

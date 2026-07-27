@@ -21,14 +21,14 @@ def test_generator_model_uses_nvidia_default_when_provider_is_nvidia(monkeypatch
     monkeypatch.setenv("LLM_PROVIDER", "nvidia")
     monkeypatch.delenv("NVIDIA_MODEL", raising=False)
 
-    assert llm_service.generator_model() == "mistralai/mixtral-8x22b-instruct-v0.1"
+    assert llm_service.generator_model() == "deepseek-ai/deepseek-v4-flash"
 
 
 def test_reviewer_model_uses_nvidia_default_when_provider_is_nvidia(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "nvidia")
     monkeypatch.delenv("NVIDIA_REVIEW_MODEL", raising=False)
 
-    assert llm_service.reviewer_model() == "meta/llama-3.1-70b-instruct"
+    assert llm_service.reviewer_model() == "meta/llama-3.3-70b-instruct"
 
 
 def test_generator_model_respects_explicit_nvidia_model_env(monkeypatch):
@@ -110,8 +110,81 @@ def test_complete_json_dispatches_to_nvidia_when_provider_is_nvidia(monkeypatch)
     resultado = llm_service.complete_json("pergunta")
 
     assert resultado == {"ok": True}
-    assert captured["model"] == "mistralai/mixtral-8x22b-instruct-v0.1"
+    assert captured["model"] == "deepseek-ai/deepseek-v4-flash"
+    assert captured["kwargs"] == {
+        "temperature": 1,
+        "top_p": 0.95,
+        "max_tokens": 16384,
+        "extra_body": {"chat_template_kwargs": {"thinking": True, "reasoning_effort": "high"}},
+        "response_format": {"type": "json_object"},
+    }
+
+
+def test_complete_json_uses_reviewer_model_without_dedicated_params_on_nvidia(monkeypatch):
+    """meta/llama-3.3-70b-instruct não tem entrada em _NVIDIA_MODEL_PARAMS — só response_format."""
+    monkeypatch.setenv("LLM_PROVIDER", "nvidia")
+    captured = {}
+
+    class FakeMessage:
+        content = '{"aprovado": true}'
+
+    class FakeChoice:
+        message = FakeMessage()
+
+    class FakeCompletions:
+        def create(self, model, messages, **kwargs):
+            captured["model"] = model
+            captured["kwargs"] = kwargs
+
+            class FakeResponse:
+                choices = [FakeChoice()]
+
+            return FakeResponse()
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeNvidiaClient:
+        chat = FakeChat()
+
+    monkeypatch.setattr(llm_service, "_nvidia_client", lambda: FakeNvidiaClient())
+
+    llm_service.complete_json("pergunta", model=llm_service.reviewer_model())
+
+    assert captured["model"] == "meta/llama-3.3-70b-instruct"
     assert captured["kwargs"] == {"response_format": {"type": "json_object"}}
+
+
+def test_nvidia_unrecognized_model_falls_back_to_no_extra_params(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "nvidia")
+    captured = {}
+
+    class FakeMessage:
+        content = "resposta em texto"
+
+    class FakeChoice:
+        message = FakeMessage()
+
+    class FakeCompletions:
+        def create(self, model, messages, **kwargs):
+            captured["kwargs"] = kwargs
+
+            class FakeResponse:
+                choices = [FakeChoice()]
+
+            return FakeResponse()
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeNvidiaClient:
+        chat = FakeChat()
+
+    monkeypatch.setattr(llm_service, "_nvidia_client", lambda: FakeNvidiaClient())
+
+    llm_service.complete("pergunta", model="algum/modelo-desconhecido")
+
+    assert captured["kwargs"] == {}
 
 
 def test_complete_json_raises_on_invalid_json_regardless_of_provider(monkeypatch):
