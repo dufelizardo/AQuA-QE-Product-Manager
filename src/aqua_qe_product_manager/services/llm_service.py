@@ -6,15 +6,20 @@ from openai import OpenAI
 
 _DEFAULT_MODEL = "mistral"
 _DEFAULT_REVIEW_MODEL = "phi4"
-_DEFAULT_NVIDIA_MODEL = "deepseek-ai/deepseek-v4-flash"
+_DEFAULT_NVIDIA_MODEL = "deepseek-ai/deepseek-v4-pro"
 _DEFAULT_NVIDIA_REVIEW_MODEL = "meta/llama-3.3-70b-instruct"
 _NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+# Fallback documentado se deepseek-v4-pro também saturar por capacidade (mesma família do
+# -flash, que saturou durante o piloto): openai/gpt-oss-120b, confirmado acessível nesta conta.
+# Não trocado proativamente porque não houve evidência de problema com o -pro ainda.
 
-# Parâmetros de sampling recomendados pela NVIDIA para cada modelo NIM piloto
-# (build.nvidia.com/playground) — chaveados por nome do modelo, não por papel
-# (gerador/revisor), para continuar corretos se um dos dois for trocado via
-# NVIDIA_MODEL/NVIDIA_REVIEW_MODEL. Modelo sem entrada aqui usa a chamada sem
-# parâmetros extras (só model/messages/response_format).
+# Parâmetros de sampling recomendados pela NVIDIA por modelo NIM (build.nvidia.com/playground)
+# — chaveados por nome do modelo, não por papel (gerador/revisor), para continuar corretos se
+# um dos dois for trocado via NVIDIA_MODEL/NVIDIA_REVIEW_MODEL. Modelo sem entrada aqui usa a
+# chamada sem parâmetros extras (só model/messages/response_format).
+# Nota: deepseek-ai/deepseek-v4-flash não é mais o default do gerador (503 "Worker local total
+# request limit reached" em duas tentativas ao vivo durante o piloto) — entrada mantida caso o
+# usuário selecione esse modelo manualmente via NVIDIA_MODEL.
 _NVIDIA_MODEL_PARAMS: dict[str, dict] = {
     "deepseek-ai/deepseek-v4-flash": {
         "temperature": 1,

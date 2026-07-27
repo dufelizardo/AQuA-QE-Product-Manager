@@ -21,7 +21,7 @@ def test_generator_model_uses_nvidia_default_when_provider_is_nvidia(monkeypatch
     monkeypatch.setenv("LLM_PROVIDER", "nvidia")
     monkeypatch.delenv("NVIDIA_MODEL", raising=False)
 
-    assert llm_service.generator_model() == "deepseek-ai/deepseek-v4-flash"
+    assert llm_service.generator_model() == "deepseek-ai/deepseek-v4-pro"
 
 
 def test_reviewer_model_uses_nvidia_default_when_provider_is_nvidia(monkeypatch):
@@ -108,6 +108,43 @@ def test_complete_json_dispatches_to_nvidia_when_provider_is_nvidia(monkeypatch)
     monkeypatch.setattr(llm_service, "_nvidia_client", lambda: FakeNvidiaClient())
 
     resultado = llm_service.complete_json("pergunta")
+
+    assert resultado == {"ok": True}
+    assert captured["model"] == "deepseek-ai/deepseek-v4-pro"
+    assert captured["kwargs"] == {"response_format": {"type": "json_object"}}
+
+
+def test_complete_json_uses_deepseek_reasoning_params_when_explicitly_selected(monkeypatch):
+    """deepseek-ai/deepseek-v4-flash não é mais o default (503 de capacidade em teste ao vivo),
+    mas continua com params dedicados em _NVIDIA_MODEL_PARAMS caso seja selecionado manualmente."""
+    monkeypatch.setenv("LLM_PROVIDER", "nvidia")
+    captured = {}
+
+    class FakeMessage:
+        content = '{"ok": true}'
+
+    class FakeChoice:
+        message = FakeMessage()
+
+    class FakeCompletions:
+        def create(self, model, messages, **kwargs):
+            captured["model"] = model
+            captured["kwargs"] = kwargs
+
+            class FakeResponse:
+                choices = [FakeChoice()]
+
+            return FakeResponse()
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeNvidiaClient:
+        chat = FakeChat()
+
+    monkeypatch.setattr(llm_service, "_nvidia_client", lambda: FakeNvidiaClient())
+
+    resultado = llm_service.complete_json("pergunta", model="deepseek-ai/deepseek-v4-flash")
 
     assert resultado == {"ok": True}
     assert captured["model"] == "deepseek-ai/deepseek-v4-flash"
