@@ -1,7 +1,5 @@
-import os
-
 from ..models import ProductVision
-from ..services.llm_service import complete_json
+from ..services.llm_service import complete_json, reviewer_model
 
 _SYSTEM = (
     "Você é um revisor crítico de visões de produto, independente de quem "
@@ -11,12 +9,9 @@ _SYSTEM = (
     "sem relação clara com o statement."
 )
 
-_DEFAULT_REVIEW_MODEL = "phi4"
-
-
 def review_product_vision(vision: ProductVision) -> dict:
     """Revisa a visão de produto com um LLM diferente do gerador, apontando problemas de clareza e coerência."""
-    modelo = os.getenv("OLLAMA_REVIEW_MODEL", _DEFAULT_REVIEW_MODEL)
+    modelo = reviewer_model()
     prompt = (
         f"Statement: {vision.statement}\n"
         f"Público-alvo: {vision.target_audience}\n"

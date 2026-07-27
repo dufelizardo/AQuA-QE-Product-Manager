@@ -7,7 +7,7 @@ dependencies = [
     # Exemplos:
     #
     # LLM Providers
-    # "openai>=1.0",
+    "openai>=1.0",  # usado para o provedor NVIDIA NIM (LLM_PROVIDER=nvidia), API compatível com OpenAI
     # "anthropic>=0.50",
     # "google-genai>=1.0",
     # "groq>=0.11",

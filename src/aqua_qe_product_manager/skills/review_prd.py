@@ -1,7 +1,5 @@
-import os
-
 from ..models import PRDDraft
-from ..services.llm_service import complete_json
+from ..services.llm_service import complete_json, reviewer_model
 
 _SYSTEM = (
     "Você é um revisor crítico de PRDs, independente de quem os gerou. "
@@ -15,12 +13,9 @@ _SYSTEM = (
     "bloqueante."
 )
 
-_DEFAULT_REVIEW_MODEL = "phi4"
-
-
 def review_prd(draft: PRDDraft) -> dict:
     """Revisa o PRD com um LLM diferente do gerador, apontando problemas de clareza e coerência."""
-    modelo = os.getenv("OLLAMA_REVIEW_MODEL", _DEFAULT_REVIEW_MODEL)
+    modelo = reviewer_model()
     prompt = (
         f"Contexto/problema: {draft.context_problem}\n"
         f"Objetivo: {draft.objective}\n"

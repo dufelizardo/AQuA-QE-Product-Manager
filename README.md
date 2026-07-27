@@ -33,7 +33,7 @@ No change is needed in Product Owner's code — it already accepts a `.md` file 
 - **`src/aqua_qe_product_manager/models/`** — the agent's data structures (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — the latter with the exact same fields as Product Owner's `PRDDraft` —, PrioritizedRequirement/PriorityInputs).
 - **`src/aqua_qe_product_manager/workflow/`** — orchestration of the skill sequence per artifact (discovery, vision, strategy, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — entry point that decides which workflow to run per mode.
-- **`src/aqua_qe_product_manager/services/`** — external integrations: `llm_service` (local Ollama, generation/review), `jira_service` (Jira Cloud REST API, **read-only**) and `confluence_service` (Confluence Cloud REST API, reading + new-page creation + existing-page update, used by `--publicar-confluence`/`--atualizar-confluence`). No RAG at this phase.
+- **`src/aqua_qe_product_manager/services/`** — external integrations: `llm_service` (Ollama by default, generation/review; optional NVIDIA NIM pilot via `LLM_PROVIDER=nvidia` toggle — see Configuration below), `jira_service` (Jira Cloud REST API, **read-only**) and `confluence_service` (Confluence Cloud REST API, reading + new-page creation + existing-page update, used by `--publicar-confluence`/`--atualizar-confluence`). No RAG at this phase.
 
 ## Setup
 
@@ -56,6 +56,7 @@ This is a standalone repository (not part of any monorepo) — `uv sync` here re
    ```bash
    cp .env.example .env
    ```
+   Optional: to pilot NVIDIA NIM (`build.nvidia.com`) instead of local Ollama for generation/review, set `LLM_PROVIDER=nvidia` and `NVIDIA_API_KEY` in `.env` (`NVIDIA_MODEL`/`NVIDIA_REVIEW_MODEL` have defaults, see `.env.example`). Leaving `LLM_PROVIDER` unset keeps the Ollama behavior above unchanged.
 5. Run the test suite (fully mocked, no real Ollama calls) to confirm the setup:
    ```bash
    uv run pytest

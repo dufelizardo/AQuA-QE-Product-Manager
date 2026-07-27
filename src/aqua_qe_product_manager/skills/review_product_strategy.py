@@ -1,7 +1,5 @@
-import os
-
 from ..models import ProductStrategy
-from ..services.llm_service import complete_json
+from ..services.llm_service import complete_json, reviewer_model
 
 _SYSTEM = (
     "Você é um revisor crítico de estratégias de produto, independente de "
@@ -11,12 +9,9 @@ _SYSTEM = (
     "com a visão."
 )
 
-_DEFAULT_REVIEW_MODEL = "phi4"
-
-
 def review_product_strategy(strategy: ProductStrategy) -> dict:
     """Revisa a estratégia de produto com um LLM diferente do gerador, apontando problemas de clareza e coerência."""
-    modelo = os.getenv("OLLAMA_REVIEW_MODEL", _DEFAULT_REVIEW_MODEL)
+    modelo = reviewer_model()
     prompt = (
         f"Metas: {strategy.goals}\n"
         f"Temas de roadmap: {strategy.roadmap_themes}\n"

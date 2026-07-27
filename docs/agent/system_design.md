@@ -62,7 +62,8 @@ Caminho alternativo, só para PRD (`--modo prd --prd-existente arquivo.md`): `pa
 
 ## Restrições técnicas
 
-- Mesmos modelos de LLM do AQuA-QE Product Owner (`mistral` gerador, `phi4` revisor), via Ollama local — reaproveitamento deliberado, sem introduzir um terceiro provedor sem necessidade comprovada.
+- Mesmos modelos de LLM do AQuA-QE Product Owner (`mistral` gerador, `phi4` revisor), via Ollama local por padrão — reaproveitamento deliberado, sem introduzir um terceiro provedor sem necessidade comprovada.
+- **Piloto de provedor alternativo via toggle** (`LLM_PROVIDER=ollama|nvidia`, padrão `ollama`): este agente foi escolhido como piloto para avaliar NVIDIA NIM (`build.nvidia.com`, API compatível com OpenAI) como provedor opcional de gerador/revisor, mantendo Ollama como padrão inalterado. Decisão consciente de reverter, apenas para o piloto, o princípio "modelos locais via Ollama" descrito no `WHITEPAPER.md` — não uma substituição definitiva. Embedding fica fora deste piloto (este agente não tem infraestrutura de embedding hoje).
 - Sem RAG/embeddings nesta fase — `knowledge/methodology/` é pequeno o suficiente para caber direto no prompt; `retrieve_chunks` fica para uma fase futura, se o volume de conhecimento crescer (mesma decisão de "não construir antecipadamente sem consumidor" já aplicada no Product Owner).
 
 ## Observabilidade

@@ -141,7 +141,8 @@ This separation preserves each agent's deterministic/auditable nature — neithe
 
 ## 9. Technical stack
 
-- **Local LLM via Ollama** — `mistral` for generation, `phi4` as an independent reviewer. Same infrastructure choice as Product Owner, deliberately reused instead of introducing a third provider without proven need.
+- **Local LLM via Ollama (default)** — `mistral` for generation, `phi4` as an independent reviewer. Same infrastructure choice as Product Owner, deliberately reused instead of introducing a third provider without proven need.
+- **NVIDIA NIM provider pilot via toggle** (`LLM_PROVIDER=ollama|nvidia`) — this agent is the chosen pilot for evaluating `build.nvidia.com` (OpenAI-compatible API) as an optional generator/reviewer alternative, preserving the two-independent-models principle (different families, mitigating *self-preference bias*). Ollama remains the unchanged default when `LLM_PROVIDER` is unset. Embedding is out of scope for this pilot.
 - **Jira Cloud (REST API, read-only) / Confluence Cloud (REST API, read + new-page creation/update)** — same credentials as Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`, plus `CONFLUENCE_SPACE_KEY` to publish), reused via `httpx`; ADF→text (Jira), XHTML storage format→text (reading) and text→storage format (writing) conversion ported verbatim from Product Owner's respective `services/`.
 - **No RAG/embeddings at this phase** — `knowledge/methodology/` is small enough to fit directly in each skill's prompt; `retrieve_chunks` is left for a future phase, if the knowledge volume grows.
 - **`uv`** for dependencies — standalone project (own repository), with `ollama`, `httpx` and `python-dotenv` declared in `pyproject.toml`.

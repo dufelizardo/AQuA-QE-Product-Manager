@@ -2,31 +2,69 @@ import json
 import os
 
 import ollama
+from openai import OpenAI
 
 _DEFAULT_MODEL = "mistral"
+_DEFAULT_REVIEW_MODEL = "phi4"
+_DEFAULT_NVIDIA_MODEL = "mistralai/mixtral-8x22b-instruct-v0.1"
+_DEFAULT_NVIDIA_REVIEW_MODEL = "meta/llama-3.1-70b-instruct"
+_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
-def _client() -> ollama.Client:
+def _provider() -> str:
+    return os.getenv("LLM_PROVIDER", "ollama")
+
+
+def _ollama_client() -> ollama.Client:
     host = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     return ollama.Client(host=host)
 
 
+def _nvidia_client() -> OpenAI:
+    return OpenAI(base_url=_NVIDIA_BASE_URL, api_key=os.environ["NVIDIA_API_KEY"])
+
+
+def generator_model() -> str:
+    """Resolve o modelo gerador conforme o provedor ativo (LLM_PROVIDER=ollama|nvidia)."""
+    if _provider() == "nvidia":
+        return os.getenv("NVIDIA_MODEL", _DEFAULT_NVIDIA_MODEL)
+    return os.getenv("OLLAMA_MODEL", _DEFAULT_MODEL)
+
+
+def reviewer_model() -> str:
+    """Resolve o modelo revisor conforme o provedor ativo (LLM_PROVIDER=ollama|nvidia)."""
+    if _provider() == "nvidia":
+        return os.getenv("NVIDIA_REVIEW_MODEL", _DEFAULT_NVIDIA_REVIEW_MODEL)
+    return os.getenv("OLLAMA_REVIEW_MODEL", _DEFAULT_REVIEW_MODEL)
+
+
+def _chat(modelo: str, messages: list[dict], json_mode: bool) -> str:
+    if _provider() == "nvidia":
+        kwargs = {"response_format": {"type": "json_object"}} if json_mode else {}
+        resposta = _nvidia_client().chat.completions.create(
+            model=modelo, messages=messages, **kwargs
+        )
+        return resposta.choices[0].message.content
+
+    kwargs = {"format": "json"} if json_mode else {}
+    resposta = _ollama_client().chat(model=modelo, messages=messages, **kwargs)
+    return resposta["message"]["content"]
+
+
 def complete(prompt: str, system: str = "", model: str | None = None) -> str:
-    """Envia um prompt ao modelo local via Ollama e retorna o texto de resposta."""
-    modelo = model or os.getenv("OLLAMA_MODEL", _DEFAULT_MODEL)
+    """Envia um prompt ao provedor de LLM ativo (Ollama ou NVIDIA NIM) e retorna o texto de resposta."""
+    modelo = model or generator_model()
     messages = [{"role": "system", "content": system}] if system else []
     messages.append({"role": "user", "content": prompt})
-    response = _client().chat(model=modelo, messages=messages)
-    return response["message"]["content"]
+    return _chat(modelo, messages, json_mode=False)
 
 
 def complete_json(prompt: str, system: str = "", model: str | None = None) -> dict:
-    """Envia um prompt ao modelo local via Ollama e retorna a resposta já parseada como JSON."""
-    modelo = model or os.getenv("OLLAMA_MODEL", _DEFAULT_MODEL)
+    """Envia um prompt ao provedor de LLM ativo e retorna a resposta já parseada como JSON."""
+    modelo = model or generator_model()
     messages = [{"role": "system", "content": system}] if system else []
     messages.append({"role": "user", "content": prompt})
-    response = _client().chat(model=modelo, messages=messages, format="json")
-    conteudo = response["message"]["content"]
+    conteudo = _chat(modelo, messages, json_mode=True)
     try:
         return json.loads(conteudo)
     except json.JSONDecodeError as exc:

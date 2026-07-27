@@ -33,7 +33,7 @@ Nenhuma mudança é necessária no código do Product Owner — ele já aceita a
 - **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner —, PrioritizedRequirement/PriorityInputs).
 - **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
 - **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
-- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama local, geração/revisão), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova + atualização de página existente, usadas por `--publicar-confluence`/`--atualizar-confluence`). Sem RAG nesta fase.
+- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama por padrão, geração/revisão; piloto opcional de NVIDIA NIM via toggle `LLM_PROVIDER=nvidia` — ver Configuração abaixo), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova + atualização de página existente, usadas por `--publicar-confluence`/`--atualizar-confluence`). Sem RAG nesta fase.
 
 ## Configuração
 
@@ -56,6 +56,7 @@ Este é um repositório independente (não faz parte de nenhum monorepo) — o `
    ```bash
    cp .env.example .env
    ```
+   Opcional: para pilotar NVIDIA NIM (`build.nvidia.com`) em vez de Ollama local para geração/revisão, defina `LLM_PROVIDER=nvidia` e `NVIDIA_API_KEY` no `.env` (`NVIDIA_MODEL`/`NVIDIA_REVIEW_MODEL` têm padrões, ver `.env.example`). Deixar `LLM_PROVIDER` sem definir mantém o comportamento com Ollama descrito acima inalterado.
 5. Rode a suíte de testes (totalmente mockada, sem chamadas reais a Ollama) para confirmar a configuração:
    ```bash
    uv run pytest
