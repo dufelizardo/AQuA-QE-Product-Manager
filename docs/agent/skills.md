@@ -220,6 +220,30 @@
 - **Erros esperados**: resposta do LLM não é JSON válido (`ValueError`).
 - **Dependências**: chamada pelo ciclo de refinamento do CLI.
 
+## Re-derivação seletiva no ciclo de refinamento
+
+Depois de `refine_prd` reescrever os 9 campos centrais, `workflow/generate_prd.py::refine_prd_draft` decide, campo de profundidade por campo de profundidade, se vale a pena re-rodar a skill correspondente — comparando quais campos centrais mudaram (diff antes/depois de `refine_prd`) contra o mapa `_DEPENDENCIAS_PROFUNDIDADE` abaixo. Isso é diferente do campo "Dependências" de cada skill acima (que documenta dependência de *dado de entrada*): aqui o assunto é *gatilho de re-execução* — quando um campo central listado abaixo muda, a skill é re-executada; quando não, o valor já existente no draft é preservado como estava.
+
+O mapa é **heurístico** na maioria das linhas (a skill recebe o texto inteiro do PRD, não um campo isolado — não há como provar que o resultado mudaria só olhando o campo). Rótulos:
+- **exata**: a skill literalmente só recebe esse(s) campo(s) como argumento, sem o texto completo do PRD.
+- **semi-explícita**: o próprio prompt/system message da skill cita esse(s) campo(s) nominalmente.
+- **heurística**: julgamento de produto, deliberadamente enviesado para incluir mais campos do que o estritamente necessário nas entradas de menor confiança — a regra de desempate é sempre "na dúvida, re-executa", nunca pular por engano.
+
+| Campo de profundidade (skill) | Depende de (campos centrais) | Confiança |
+|---|---|---|
+| `personas` (`synthesize_personas`) | `context_problem`, `target_audience`, `scope` | heurística |
+| `user_journeys` (`identify_user_journeys`) | `scope`, `functional_requirements` | semi-explícita |
+| `business_objectives` (`identify_business_objectives`) | `objective`, `success_criteria` | exata |
+| `use_cases` (`identify_use_cases`) | `scope`, `functional_requirements` | semi-explícita |
+| `dependencies` (`identify_external_dependencies`) | `functional_requirements`, `non_functional_requirements` | heurística |
+| `technical_assumptions` (`identify_technical_assumptions`) | `non_functional_requirements`, `risks_assumptions` | heurística |
+| `constraints` (`identify_constraints`) | `non_functional_requirements`, `risks_assumptions`, `out_of_scope` | heurística |
+| `glossary` (`identify_prd_glossary`) | `context_problem`, `scope`, `functional_requirements`, `non_functional_requirements` | heurística (baixa confiança, deliberadamente ampla) |
+| `candidate_product_metrics` (`identify_candidate_product_metrics`) | `context_problem`, `objective`, `target_audience` | heurística |
+| `mvp_scope`/`future_scope` (`identify_mvp_scope`) | `functional_requirements` (exata) + `scope`, `out_of_scope` (heurística) | mista |
+
+Na **geração inicial** (`generate_prd_draft`), não há um "antes" para comparar — as 10 skills sempre rodam, sem exceção. `refine_prd_draft(..., forcar_rederivacao_completa=True)` ignora o mapa inteiro e força a re-derivação completa, como válvula de escape se o mapa heurístico errar em algum caso real. Ver issue [#10](https://github.com/dufelizardo/AQuA-QE-Product-Manager/issues/10).
+
 ## identify_user_journeys
 
 - **Descrição**: identifica jornadas do usuário (passo a passo de um fluxo relevante, ex.: agendamento) sustentadas pelo texto de entrada. Nunca inventa um passo que não decorra do escopo/requisitos descritos.
