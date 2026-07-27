@@ -337,6 +337,17 @@
 - **Erros esperados**: credencial ausente, página inexistente ou sem permissão (HTTP 4xx, propagado via `raise_for_status`).
 - **Dependências**: chamada pelo CLI (`run.py --atualizar-confluence`) só após aceitação humana explícita do artefato — mutuamente exclusivo com `--publicar-confluence` na mesma execução.
 
+### Bug conhecido: `_texto_para_storage` não cobre toda a sintaxe que `format_prd_markdown` passou a gerar
+
+`_texto_para_storage` (`services/confluence_service.py`) é um conversor Markdown→XHTML minimalista, escrito só para o que o PRD original precisava: `#`/`##`/`###` (headings) e `- ` (listas simples). O enriquecimento do PRD (personas, jornadas, objetivos com KPI, glossário) passou a gerar construções que esse conversor nunca soube tratar, confirmado numa publicação real (`--atualizar-confluence` contra `.../pages/1179649/PRD+-+Mais+Sa+de+P+blica`):
+
+- **Tabela Markdown** (seção "Objetivos de Negócio (KPI)", `| Objetivo | KPI |`/`|---|---|`) — vira parágrafos com os caracteres `|` literais, nunca uma tabela real do Confluence.
+- **Negrito Markdown** (seção "Glossário", `**termo**: definição`) — vira asteriscos literais (`**PRD**: ...`), nunca `<strong>`.
+- **Lista numerada** (seção "Jornadas do Usuário", `1. passo`/`2. passo`) — cada linha vira um `<p>` solto, perdendo a estrutura de lista ordenada.
+- **Lista aninhada dentro de um item** (seção "Personas", `- Objetivos: {lista}`, quando a persona tem mais de um objetivo/ponto de dor) — os itens da sub-lista viram bullets soltos no mesmo nível de "Objetivos"/"Pontos de dor", perdendo a associação com o campo pai. Causa raiz em `_personas_md` (`format_prd_markdown.py`): embutir uma lista já formatada (`_lista_md`) dentro de um único item de outra lista não produz Markdown aninhado válido.
+
+Nenhum desses quatro é um erro de dado (GR-1 continua intacto — o conteúdo é rastreável à fonte) — é puramente a camada de conversão para Confluence não ter acompanhado a riqueza nova do PRD. `_texto_para_storage` é a mesma função portada para o AQuA-QE Solution Architect; o mesmo problema é esperado lá para qualquer seção que use tabela/negrito/lista numerada/lista aninhada.
+
 ## classify_moscow
 
 - **Descrição**: classifica cada requisito funcional do PRD aceito em MoSCoW (Must/Should/Could/Won't), com base exclusivamente em sinais de linguagem explícitos no texto de origem (ex.: "essencial" → must, "seria bom ter" → could). Nunca inventa uma categoria sem sinal claro — nesse caso, a categoria fica vazia (GR-M4/RULE-M3 tratam especificamente do risco numérico de RICE/WSJF; esta skill segue GR-1 normalmente, por ser categórica).
