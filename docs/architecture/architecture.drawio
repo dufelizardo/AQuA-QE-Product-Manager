@@ -103,7 +103,7 @@
                 <mxCell id="bandExternos" value="Sistemas externos" style="rounded=0;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;verticalAlign=top;fontStyle=1;container=1;collapsible=0;;" parent="1" vertex="1">
                     <mxGeometry x="40" y="900" width="920" height="110" as="geometry"/>
                 </mxCell>
-                <mxCell id="ext1" value="Ollama local&#xa;(mistral, phi4)" style="rounded=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" parent="1" vertex="1">
+                <mxCell id="ext1" value="LLM ativo (LLM_PROVIDER):&#xa;Ollama local (mistral, phi4)&#xa;ou NVIDIA NIM (piloto)" style="rounded=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" parent="1" vertex="1">
                     <mxGeometry x="24" y="35" width="280" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="ext2" value="Jira Cloud&#xa;(REST API v3, leitura)" style="rounded=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" parent="1" vertex="1">
