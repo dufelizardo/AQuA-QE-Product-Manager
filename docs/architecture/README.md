@@ -3,7 +3,7 @@
 Representação visual da arquitetura e dos fluxos do agente, complementando a documentação em prosa de `../agent/system_design.md`, `../agent/agent_design.md`, `../agent/skills.md` e `../../WHITEPAPER.md`.
 
 - **Fonte editável**: [`architecture.drawio`](architecture.drawio) — arquivo único, 5 páginas, abra em [app.diagrams.net](https://app.diagrams.net) ou na extensão "Draw.io Integration" do VS Code.
-- **Espelho estático**: `svg/*.svg` — mesmo conteúdo de cada página, visível diretamente aqui no GitHub/VS Code, sem precisar abrir o draw.io.
+- **Espelho estático**: `svg/*.svg` — mesmo conteúdo de cada página, visível diretamente aqui no GitHub/VS Code, sem precisar abrir o draw.io. **Pendente**: os SVGs ainda refletem a versão anterior do `.drawio` — precisam ser reexportados (abrir o arquivo no draw.io, exportar cada página como SVG, sobrescrever os arquivos correspondentes em `svg/`).
 
 ## 1 — Arquitetura em camadas
 
@@ -22,6 +22,8 @@ Caso especial só para PRD (`--prd-existente`): a etapa `Generate` é substituí
 Depois de `Approve`, o artefato aceito (PRD, Visão ou Estratégia — não só o PRD) pode opcionalmente ser publicado como página nova (`create_confluence_page`, `--publicar-confluence`) ou usado para atualizar uma página já existente (`update_confluence_page`, `--atualizar-confluence`, mutuamente exclusivo) no Confluence, sob uma segunda confirmação humana explícita, distinta do aceite — também sem diagrama próprio.
 
 Só para PRD, depois de `Approve`, os requisitos funcionais também podem ser priorizados (`--priorizar moscow/rice/wsjf`) — `classify_moscow` (categórico, a partir do texto) ou `compute_rice_score`/`compute_wsjf_score` (números sempre coletados interativamente do usuário, GR-M4). Exportado sempre num arquivo separado do PRD; sem diagrama próprio.
+
+Ainda dentro do PRD, logo após `generate_prd` produzir os 9 campos centrais, um conjunto de 9 skills (`identify_user_journeys`, `identify_business_objectives`, `identify_use_cases`, `identify_external_dependencies`, `identify_technical_assumptions`, `identify_constraints`, `identify_prd_glossary`, `identify_candidate_product_metrics`, `identify_mvp_scope`) enriquece o rascunho com personas (reaproveitadas da descoberta quando existirem), jornadas do usuário, objetivos de negócio com KPI, casos de uso, dependências externas, premissas técnicas, restrições, glossário de domínio, métricas de produto candidatas e agrupamento MVP vs. versão futura — sob a mesma disciplina GR-1, com uma única exceção deliberada (`identify_candidate_product_metrics`, GR-M5: sugere métricas de mercado típicas, sempre rotuladas como sugestão, nunca como fato). Depois de qualquer refinamento (`--refinar`), esses 10 campos são re-derivados a partir do PRD já refinado, para não ficarem obsoletos. Detalhe completo em `../agent/prd.md` e `../../WHITEPAPER.md`, seção 5.1; sem diagrama próprio.
 
 ## 3 — Fluxo de descoberta
 
