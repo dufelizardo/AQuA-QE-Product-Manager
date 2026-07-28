@@ -96,6 +96,10 @@ Skills com LLM revisor independente (`OLLAMA_REVIEW_MODEL`, padrão `phi4` — d
 
 - `review_product_vision`, `review_product_strategy`, `review_prd`.
 
+Skills de embedding/RAG (Ollama `bge-m3` + Qdrant embarcado, sem servidor externo — primeira infraestrutura de embedding/vetor deste agente):
+
+- `record_refinement_answer`/`suggest_refinement_answer` — memória institucional de respostas humanas de ciclos de refinamento (collection `refinement_answer_memory`): grava cada resposta dada num ciclo (visão, estratégia ou PRD) e sugere — nunca aplica automaticamente — a mais parecida já dada antes, para uma pergunta semelhante num ciclo futuro do mesmo ou de outro projeto (ver seção 11).
+
 Detalhamento completo de entrada/saída/erros de cada skill em `docs/agent/skills.md`.
 
 ### 5.1 Profundidade do PRD
@@ -144,7 +148,7 @@ Essa separação preserva a característica determinística/auditável de cada a
 - **LLM local via Ollama (padrão)** — `mistral` para geração, `phi4` como revisor independente. Mesma escolha de infraestrutura do Product Owner, deliberadamente reaproveitada em vez de introduzir um terceiro provedor sem necessidade comprovada.
 - **Piloto de provedor NVIDIA NIM via toggle** (`LLM_PROVIDER=ollama|nvidia`) — este agente é o piloto escolhido para avaliar `build.nvidia.com` (API compatível com OpenAI) como alternativa opcional de gerador/revisor, preservando o princípio de dois modelos independentes (famílias diferentes, mitigando *self-preference bias*). Ollama continua o padrão inalterado quando `LLM_PROVIDER` não é definido. Embedding fica fora deste piloto.
 - **Jira Cloud (REST API, leitura) / Confluence Cloud (REST API, leitura + criação/atualização de página)** — mesmas credenciais do Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`, mais `CONFLUENCE_SPACE_KEY` para publicar), reaproveitadas via `httpx`; conversão ADF→texto (Jira), storage format XHTML→texto (leitura) e texto→storage format (escrita) portadas verbatim dos respectivos `services/` do Product Owner.
-- **Sem RAG/embeddings nesta fase** — `knowledge/methodology/` é pequeno o suficiente para caber direto no prompt de cada skill; `retrieve_chunks` fica para uma fase futura, se o volume de conhecimento crescer.
+- **Sem RAG sobre `knowledge/methodology/` nesta fase** — pequeno o suficiente para caber direto no prompt de cada skill; `retrieve_chunks` (nos moldes do Product Owner) fica para uma fase futura, se o volume de conhecimento crescer. Ideia distinta da memória institucional de refinamento (seção 5), já implementada.
 - **`uv`** para dependências — projeto standalone (repositório próprio), com `ollama`, `httpx` e `python-dotenv` declarados em `pyproject.toml`.
 - **Python 3.12+**, `src/` layout.
 
@@ -163,7 +167,7 @@ A avaliação do agente em produção combina três camadas que nunca se substit
 - **Priorização Kano** — **permanentemente** fora de escopo, não uma questão de fase: depende estruturalmente de dados de pesquisa de satisfação de cliente ausentes do tipo de entrada deste agente. MoSCoW/RICE/WSJF já estão implementados (`--priorizar`, seção 8).
 - **Business case formal (ROI/CAC/LTV)** — continua fora de escopo (GR-M2): exige projeção financeira que este agente não pode inventar. O agrupamento leve MVP vs. versão futura (`mvp_scope`/`future_scope`, seção 5.1) já foi desbloqueado — era a parte mais simples do que estava adiado aqui, e o consumidor real que faltava já existe.
 - **Escrita no Jira** — este agente só lê tickets Jira; criar ou atualizar um ticket continua exclusivo do Product Owner (`create_jira_story`/`update_jira_issue`), que já cobre esse caso.
-- **RAG sobre `knowledge/methodology/`** — adiado enquanto o volume de conhecimento couber direto no prompt (ver seção 9).
+- **RAG sobre `knowledge/methodology/`** — adiado enquanto o volume de conhecimento couber direto no prompt (ver seção 9). Distinto da memória institucional de respostas de refinamento (seção 5), que já tem consumidor real e foi implementada.
 - **Resiliência a falhas de infraestrutura do Ollama local** — mesma decisão consciente do Product Owner: reexecutar manualmente em vez de adicionar retry automático, até haver evidência de que o custo de complexidade compensa.
 
 ## 12. Como executar

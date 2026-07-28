@@ -68,10 +68,12 @@ skills:
   - compute_rice_score
   - compute_wsjf_score
   - export_markdown
+  - record_refinement_answer
+  - suggest_refinement_answer
 
 memory:
-  vector: false
-  rag: false
+  vector: true
+  rag: true
   knowledge_graph: false
 
 rules: rules.md

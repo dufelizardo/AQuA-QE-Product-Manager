@@ -54,6 +54,12 @@ from aqua_qe_product_manager.skills.parse_chat_transcript import parse_chat_tran
 from aqua_qe_product_manager.skills.read_confluence_page import read_confluence_page  # noqa: E402
 from aqua_qe_product_manager.skills.read_jira_issue import read_jira_issue  # noqa: E402
 from aqua_qe_product_manager.skills.read_text_file import read_text_file  # noqa: E402
+from aqua_qe_product_manager.skills.record_refinement_answer import (  # noqa: E402
+    record_refinement_answer,
+)
+from aqua_qe_product_manager.skills.suggest_refinement_answer import (  # noqa: E402
+    suggest_refinement_answer,
+)
 from aqua_qe_product_manager.skills.update_confluence_page import (  # noqa: E402
     update_confluence_page,
 )
@@ -141,8 +147,16 @@ def _ciclo_de_refinamento_visao(vision: ProductVision) -> ProductVision:
         print("\nO revisor apontou problemas na visão. Responda para ajudar a refinar:")
         respostas = []
         for pergunta in perguntas:
+            sugestao = suggest_refinement_answer(pergunta)
+            if sugestao:
+                print(
+                    f"  \U0001F4A1 Resposta usada antes p/ pergunta parecida "
+                    f"(similaridade {sugestao['score']:.2f}): {sugestao['resposta']}"
+                )
             resposta = input(f"  {pergunta}\n  > ")
             respostas.append({"pergunta": pergunta, "resposta": resposta})
+            if resposta.strip():
+                record_refinement_answer(pergunta, resposta, tipo_artefato="visao")
 
         vision = refine_vision_draft(vision, respostas)
         print("\n--- visão refinada ---")
@@ -198,8 +212,16 @@ def _ciclo_de_refinamento_estrategia(strategy: ProductStrategy) -> ProductStrate
         print("\nO revisor apontou problemas na estratégia. Responda para ajudar a refinar:")
         respostas = []
         for pergunta in perguntas:
+            sugestao = suggest_refinement_answer(pergunta)
+            if sugestao:
+                print(
+                    f"  \U0001F4A1 Resposta usada antes p/ pergunta parecida "
+                    f"(similaridade {sugestao['score']:.2f}): {sugestao['resposta']}"
+                )
             resposta = input(f"  {pergunta}\n  > ")
             respostas.append({"pergunta": pergunta, "resposta": resposta})
+            if resposta.strip():
+                record_refinement_answer(pergunta, resposta, tipo_artefato="estrategia")
 
         strategy = refine_strategy_draft(strategy, respostas)
         print("\n--- estratégia refinada ---")
@@ -264,8 +286,16 @@ def _ciclo_de_refinamento_prd(draft: PRDDraft) -> PRDDraft:
         print("\nO revisor apontou problemas no PRD. Responda para ajudar a refinar:")
         respostas = []
         for pergunta in perguntas:
+            sugestao = suggest_refinement_answer(pergunta)
+            if sugestao:
+                print(
+                    f"  \U0001F4A1 Resposta usada antes p/ pergunta parecida "
+                    f"(similaridade {sugestao['score']:.2f}): {sugestao['resposta']}"
+                )
             resposta = input(f"  {pergunta}\n  > ")
             respostas.append({"pergunta": pergunta, "resposta": resposta})
+            if resposta.strip():
+                record_refinement_answer(pergunta, resposta, tipo_artefato="prd")
 
         draft = refine_prd_draft(draft, respostas)
         print("\n--- PRD refinado ---")

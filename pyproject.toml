@@ -27,7 +27,7 @@ dependencies = [
     # "accelerate>=1.0",
     #
     # Banco Vetorial
-    # "qdrant-client>=1.12",
+    "qdrant-client>=1.12",  # usado por services/rag_service.py, embarcado/local — ver CLAUDE.md
     # "chromadb>=0.5",
     # "faiss-cpu>=1.9",
     #

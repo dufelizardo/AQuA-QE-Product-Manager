@@ -96,6 +96,10 @@ Skills with an independent reviewer LLM (`OLLAMA_REVIEW_MODEL`, default `phi4` �
 
 - `review_product_vision`, `review_product_strategy`, `review_prd`.
 
+Embedding/RAG skills (Ollama `bge-m3` + embedded Qdrant, no external server — this agent's first embedding/vector infrastructure):
+
+- `record_refinement_answer`/`suggest_refinement_answer` — institutional memory of human answers from refinement cycles (`refinement_answer_memory` collection): records each answer given in a cycle (vision, strategy or PRD) and suggests — never auto-applies — the most similar one already given before, for a similar question in a future cycle of the same or a different project (see section 11).
+
 Full input/output/error breakdown of each skill in `docs/agent/skills.md`.
 
 ### 5.1 PRD depth
@@ -144,7 +148,7 @@ This separation preserves each agent's deterministic/auditable nature — neithe
 - **Local LLM via Ollama (default)** — `mistral` for generation, `phi4` as an independent reviewer. Same infrastructure choice as Product Owner, deliberately reused instead of introducing a third provider without proven need.
 - **NVIDIA NIM provider pilot via toggle** (`LLM_PROVIDER=ollama|nvidia`) — this agent is the chosen pilot for evaluating `build.nvidia.com` (OpenAI-compatible API) as an optional generator/reviewer alternative, preserving the two-independent-models principle (different families, mitigating *self-preference bias*). Ollama remains the unchanged default when `LLM_PROVIDER` is unset. Embedding is out of scope for this pilot.
 - **Jira Cloud (REST API, read-only) / Confluence Cloud (REST API, read + new-page creation/update)** — same credentials as Product Owner (`JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN`, plus `CONFLUENCE_SPACE_KEY` to publish), reused via `httpx`; ADF→text (Jira), XHTML storage format→text (reading) and text→storage format (writing) conversion ported verbatim from Product Owner's respective `services/`.
-- **No RAG/embeddings at this phase** — `knowledge/methodology/` is small enough to fit directly in each skill's prompt; `retrieve_chunks` is left for a future phase, if the knowledge volume grows.
+- **No RAG over `knowledge/methodology/` at this phase** — small enough to fit directly in each skill's prompt; `retrieve_chunks` (mirroring Product Owner) is left for a future phase, if the knowledge volume grows. A distinct idea from the refinement institutional memory (section 5), already implemented.
 - **`uv`** for dependencies — standalone project (own repository), with `ollama`, `httpx` and `python-dotenv` declared in `pyproject.toml`.
 - **Python 3.12+**, `src/` layout.
 
@@ -163,7 +167,7 @@ Evaluating the agent in production combines three layers that never replace one 
 - **Kano prioritization** — **permanently** out of scope, not a phasing question: it structurally depends on customer satisfaction-survey data absent from this agent's input types. MoSCoW/RICE/WSJF are already implemented (`--priorizar`, section 8).
 - **Formal business case (ROI/CAC/LTV)** — still out of scope (GR-M2): requires financial projections this agent cannot invent. The lightweight MVP-vs-future-scope grouping (`mvp_scope`/`future_scope`, section 5.1) has already been unblocked — it was the simplest part of what was deferred here, and the missing real consumer now exists.
 - **Writing to Jira** — this agent only reads Jira tickets; creating or updating a ticket stays exclusive to Product Owner (`create_jira_story`/`update_jira_issue`), which already covers that case.
-- **RAG over `knowledge/methodology/`** — deferred while the knowledge volume still fits directly in the prompt (see section 9).
+- **RAG over `knowledge/methodology/`** — deferred while the knowledge volume still fits directly in the prompt (see section 9). Distinct from the refinement-answer institutional memory (section 5), which already has a real consumer and has been implemented.
 - **Resilience to local Ollama infrastructure failures** — same conscious decision as Product Owner: rerun manually instead of adding automatic retry, until there's evidence the complexity cost is worth it.
 
 ## 12. How to run it
