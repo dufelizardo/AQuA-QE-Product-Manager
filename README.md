@@ -9,11 +9,43 @@ Agent that drives the product discovery and strategy phase — problem statement
 **What's the benefit**: fast synthesis with real guardrails (never invents market/financial data), handed off to the Product Owner with zero manual reformatting.
 **How it works (high level)**: Idea/chat → discovery → vision → strategy → PRD, each stage validated (checklist), reviewed (a second, independent LLM), and accepted by a human before moving to the next.
 
+## Example
+
+**Input**:
+
+```bash
+uv run python run.py --modo prd --texto "Customers need to be able to buy CDs through the app" --refinar --saida prd.md
+```
+
+**Output** — `prd.md`, with these real fields (see `knowledge/templates/prd.md`):
+
+- Context and problem
+- Objective
+- Target audience
+- Scope
+- Out of scope
+- Functional requirements
+- Non-functional requirements
+- Success criteria
+- Risks and assumptions
+
+## Structure
+
 The diagram below describes the *agent engineering methodology* used to build this agent — not its runtime pipeline (see "How it works" above):
 
 ```
 PRD → System Design → Agent Design → AI Specs/Rules/Skills → Context Engineering → Memory/MCP → Agents → Outputs
 ```
+
+- **`docs/standards/`** — platform standards (how to write an AI Spec, a Rule, a PRD, a Product Vision/Strategy, etc.). Change rarely; most of it is shared with Product Owner.
+- **`docs/agent/`** — this agent's full specification: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt, and `agent_manifest.yaml`.
+- **`knowledge/methodology/`** — methodological material that guides the agent (JTBD, North Star Framework, BABOK, ISO 29148).
+- **`knowledge/templates/`** — pure structure, no knowledge (templates for Problem Statement, Persona, Product Vision, Product Strategy, PRD).
+- **`src/aqua_qe_product_manager/skills/`** — the agent's skills in Python (read text file/Jira ticket/Confluence page, parse/format chat transcript, identify problem statement, synthesize personas, extract jobs to be done, extract market context, generate/validate/review/refine product vision, generate/validate/review/refine product strategy, generate/validate/review/refine/load PRD, identify user journeys/business objectives with KPI/use cases/external dependencies/technical assumptions/constraints/glossary/candidate metrics/MVP vs. future scope, export to Markdown, publish/update Confluence page, prioritize requirements via MoSCoW/RICE/WSJF). Full list in `docs/agent/skills.md`.
+- **`src/aqua_qe_product_manager/models/`** — the agent's data structures (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — the latter with the exact same fields as Product Owner's `PRDDraft` —, PrioritizedRequirement/PriorityInputs).
+- **`src/aqua_qe_product_manager/workflow/`** — orchestration of the skill sequence per artifact (discovery, vision, strategy, PRD).
+- **`src/aqua_qe_product_manager/orchestrator/`** — entry point that decides which workflow to run per mode.
+- **`src/aqua_qe_product_manager/services/`** — external integrations: `llm_service` (Ollama by default, generation/review; optional NVIDIA NIM pilot via `LLM_PROVIDER=nvidia` toggle — see Configuration below), `embedding_service` (Ollama, `bge-m3`, no toggle) + `rag_service` (embedded Qdrant — institutional memory of refinement answers, `refinement_answer_memory` collection), `jira_service` (Jira Cloud REST API, **read-only**) and `confluence_service` (Confluence Cloud REST API, reading + new-page creation + existing-page update, used by `--publicar-confluence`/`--atualizar-confluence`).
 
 ## Relationship with AQuA-QE Product Owner
 
@@ -29,18 +61,6 @@ uv run python run.py --modo lote --arquivo prd.md --saida saida_epic/
 ```
 
 No change is needed in Product Owner's code — it already accepts a `.md` file as input.
-
-## Structure
-
-- **`docs/standards/`** — platform standards (how to write an AI Spec, a Rule, a PRD, a Product Vision/Strategy, etc.). Change rarely; most of it is shared with Product Owner.
-- **`docs/agent/`** — this agent's full specification: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt, and `agent_manifest.yaml`.
-- **`knowledge/methodology/`** — methodological material that guides the agent (JTBD, North Star Framework, BABOK, ISO 29148).
-- **`knowledge/templates/`** — pure structure, no knowledge (templates for Problem Statement, Persona, Product Vision, Product Strategy, PRD).
-- **`src/aqua_qe_product_manager/skills/`** — the agent's skills in Python (read text file/Jira ticket/Confluence page, parse/format chat transcript, identify problem statement, synthesize personas, extract jobs to be done, extract market context, generate/validate/review/refine product vision, generate/validate/review/refine product strategy, generate/validate/review/refine/load PRD, identify user journeys/business objectives with KPI/use cases/external dependencies/technical assumptions/constraints/glossary/candidate metrics/MVP vs. future scope, export to Markdown, publish/update Confluence page, prioritize requirements via MoSCoW/RICE/WSJF). Full list in `docs/agent/skills.md`.
-- **`src/aqua_qe_product_manager/models/`** — the agent's data structures (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — the latter with the exact same fields as Product Owner's `PRDDraft` —, PrioritizedRequirement/PriorityInputs).
-- **`src/aqua_qe_product_manager/workflow/`** — orchestration of the skill sequence per artifact (discovery, vision, strategy, PRD).
-- **`src/aqua_qe_product_manager/orchestrator/`** — entry point that decides which workflow to run per mode.
-- **`src/aqua_qe_product_manager/services/`** — external integrations: `llm_service` (Ollama by default, generation/review; optional NVIDIA NIM pilot via `LLM_PROVIDER=nvidia` toggle — see Configuration below), `embedding_service` (Ollama, `bge-m3`, no toggle) + `rag_service` (embedded Qdrant — institutional memory of refinement answers, `refinement_answer_memory` collection), `jira_service` (Jira Cloud REST API, **read-only**) and `confluence_service` (Confluence Cloud REST API, reading + new-page creation + existing-page update, used by `--publicar-confluence`/`--atualizar-confluence`).
 
 ## Setup
 

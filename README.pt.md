@@ -9,11 +9,43 @@ Agente que conduz a fase de descoberta e estratégia de produto — problem stat
 **Qual o benefício**: síntese rápida com guardrails reais (nunca inventa dado de mercado/financeiro), com handoff direto para o Product Owner, sem retrabalho de formatação.
 **Como funciona (alto nível)**: Ideia/chat → descoberta → visão → estratégia → PRD, cada etapa validada (checklist), revisada (um segundo LLM independente) e aceita por um humano antes de avançar para a próxima.
 
+## Exemplo
+
+**Entrada**:
+
+```bash
+uv run python run.py --modo prd --texto "Clientes precisam conseguir contratar CDB pelo app" --refinar --saida prd.md
+```
+
+**Saída** — `prd.md`, com estes campos reais (ver `knowledge/templates/prd.md`):
+
+- Contexto e problema
+- Objetivo
+- Público-alvo
+- Escopo
+- Fora de escopo
+- Requisitos funcionais
+- Requisitos não funcionais
+- Critérios de sucesso
+- Riscos e premissas
+
+## Estrutura
+
 O diagrama abaixo descreve a *metodologia de engenharia de agentes* usada para construir este agente — não o seu pipeline de execução (ver "Como funciona" acima):
 
 ```
 PRD → System Design → Agent Design → AI Specs/Rules/Skills → Context Engineering → Memory/MCP → Agents → Outputs
 ```
+
+- **`docs/standards/`** — padrões da plataforma (como escrever um AI Spec, uma Rule, um PRD, uma Visão/Estratégia de produto, etc.). Mudam pouco; a maior parte é compartilhada com o Product Owner.
+- **`docs/agent/`** — especificação completa deste agente: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt e o `agent_manifest.yaml`.
+- **`knowledge/methodology/`** — material metodológico que orienta o agente (JTBD, North Star Framework, BABOK, ISO 29148).
+- **`knowledge/templates/`** — estrutura pura, sem conhecimento (templates de Problem Statement, Persona, Visão de Produto, Estratégia de Produto, PRD).
+- **`src/aqua_qe_product_manager/skills/`** — skills do agente em Python (ler arquivo de texto/ticket Jira/página Confluence, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar/carregar o PRD, identificar jornadas do usuário/objetivos de negócio com KPI/casos de uso/dependências externas/premissas técnicas/restrições/glossário/métricas candidatas/MVP vs. versão futura, exportar em Markdown, publicar/atualizar página no Confluence, priorizar requisitos em MoSCoW/RICE/WSJF). Lista completa em `docs/agent/skills.md`.
+- **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner —, PrioritizedRequirement/PriorityInputs).
+- **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
+- **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
+- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama por padrão, geração/revisão; piloto opcional de NVIDIA NIM via toggle `LLM_PROVIDER=nvidia` — ver Configuração abaixo), `embedding_service` (Ollama, `bge-m3`, sem toggle) + `rag_service` (Qdrant embarcado — memória institucional de respostas de refinamento, collection `refinement_answer_memory`), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova + atualização de página existente, usadas por `--publicar-confluence`/`--atualizar-confluence`).
 
 ## Relação com o AQuA-QE Product Owner
 
@@ -29,18 +61,6 @@ uv run python run.py --modo lote --arquivo prd.md --saida saida_epic/
 ```
 
 Nenhuma mudança é necessária no código do Product Owner — ele já aceita arquivo `.md` como entrada.
-
-## Estrutura
-
-- **`docs/standards/`** — padrões da plataforma (como escrever um AI Spec, uma Rule, um PRD, uma Visão/Estratégia de produto, etc.). Mudam pouco; a maior parte é compartilhada com o Product Owner.
-- **`docs/agent/`** — especificação completa deste agente: PRD, System Design, Agent Design, AI Spec, Rules, Persona, Objectives, Output Schema, Guardrails, Evaluation, Prompt e o `agent_manifest.yaml`.
-- **`knowledge/methodology/`** — material metodológico que orienta o agente (JTBD, North Star Framework, BABOK, ISO 29148).
-- **`knowledge/templates/`** — estrutura pura, sem conhecimento (templates de Problem Statement, Persona, Visão de Produto, Estratégia de Produto, PRD).
-- **`src/aqua_qe_product_manager/skills/`** — skills do agente em Python (ler arquivo de texto/ticket Jira/página Confluence, parsear/formatar transcrição de chat, identificar problem statement, sintetizar personas, extrair jobs to be done, extrair contexto de mercado, gerar/validar/revisar/refinar a visão de produto, gerar/validar/revisar/refinar a estratégia de produto, gerar/validar/revisar/refinar/carregar o PRD, identificar jornadas do usuário/objetivos de negócio com KPI/casos de uso/dependências externas/premissas técnicas/restrições/glossário/métricas candidatas/MVP vs. versão futura, exportar em Markdown, publicar/atualizar página no Confluence, priorizar requisitos em MoSCoW/RICE/WSJF). Lista completa em `docs/agent/skills.md`.
-- **`src/aqua_qe_product_manager/models/`** — estruturas de dados do agente (ProblemStatement, Persona, JobToBeDone, MarketAnalysis/Competitor, ProductVision, ProductStrategy/StrategicGoal, PRDDraft — este último com os mesmos campos exatos do `PRDDraft` do Product Owner —, PrioritizedRequirement/PriorityInputs).
-- **`src/aqua_qe_product_manager/workflow/`** — orquestração da sequência de skills por artefato (descoberta, visão, estratégia, PRD).
-- **`src/aqua_qe_product_manager/orchestrator/`** — ponto de entrada que decide qual workflow executar por modo.
-- **`src/aqua_qe_product_manager/services/`** — integrações externas: `llm_service` (Ollama por padrão, geração/revisão; piloto opcional de NVIDIA NIM via toggle `LLM_PROVIDER=nvidia` — ver Configuração abaixo), `embedding_service` (Ollama, `bge-m3`, sem toggle) + `rag_service` (Qdrant embarcado — memória institucional de respostas de refinamento, collection `refinement_answer_memory`), `jira_service` (Jira Cloud REST API, **apenas leitura**) e `confluence_service` (Confluence Cloud REST API, leitura + criação de página nova + atualização de página existente, usadas por `--publicar-confluence`/`--atualizar-confluence`).
 
 ## Configuração
 
