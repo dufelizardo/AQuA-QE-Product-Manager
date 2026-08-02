@@ -1,5 +1,7 @@
 # AQuA-QE Product Manager
 
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue) ![Architecture: human-in-the-loop](https://img.shields.io/badge/architecture-human--in--the--loop-blueviolet)
+
 > Also available in [Portuguese](README.pt.md).
 
 Agent that drives the product discovery and strategy phase — problem statement, personas, jobs to be done, market context, product vision, product strategy and PRD — from an informal idea or chat transcript, following the same agent engineering flow as its sibling agent, the [AQuA-QE Product Owner](https://github.com/dufelizardo/AQuA-QE-Product-Owner).

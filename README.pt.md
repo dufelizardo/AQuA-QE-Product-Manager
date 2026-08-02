@@ -1,5 +1,7 @@
 # AQuA-QE Product Manager
 
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue) ![Arquitetura: humano-no-loop](https://img.shields.io/badge/arquitetura-humano--no--loop-blueviolet)
+
 > Também disponível em [English](README.md).
 
 Agente que conduz a fase de descoberta e estratégia de produto — problem statement, personas, jobs to be done, contexto de mercado, visão de produto, estratégia de produto e PRD — a partir de uma ideia informal ou transcrição de chat, seguindo o mesmo fluxo de engenharia de agentes do seu agente irmão, o [AQuA-QE Product Owner](https://github.com/dufelizardo/AQuA-QE-Product-Owner).
