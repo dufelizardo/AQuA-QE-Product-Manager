@@ -2,7 +2,14 @@
 
 > Also available in [Portuguese](README.pt.md).
 
-Agent that drives the product discovery and strategy phase — problem statement, personas, jobs to be done, market context, product vision, product strategy and PRD — from an informal idea or chat transcript, following the same agent engineering flow as its sibling agent, the [AQuA-QE Product Owner](https://github.com/dufelizardo/AQuA-QE-Product-Owner):
+Agent that drives the product discovery and strategy phase — problem statement, personas, jobs to be done, market context, product vision, product strategy and PRD — from an informal idea or chat transcript, following the same agent engineering flow as its sibling agent, the [AQuA-QE Product Owner](https://github.com/dufelizardo/AQuA-QE-Product-Owner).
+
+**What problem it solves**: turns an informal idea or chat transcript into a structured, validated PRD — no unstructured planning meetings required.
+**Who uses it**: product managers, founders, or team leads doing early-stage discovery, before a formal PRD exists.
+**What's the benefit**: fast synthesis with real guardrails (never invents market/financial data), handed off to the Product Owner with zero manual reformatting.
+**How it works (high level)**: Idea/chat → discovery → vision → strategy → PRD, each stage validated (checklist), reviewed (a second, independent LLM), and accepted by a human before moving to the next.
+
+The diagram below describes the *agent engineering methodology* used to build this agent — not its runtime pipeline (see "How it works" above):
 
 ```
 PRD → System Design → Agent Design → AI Specs/Rules/Skills → Context Engineering → Memory/MCP → Agents → Outputs

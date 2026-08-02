@@ -2,7 +2,14 @@
 
 > Também disponível em [English](README.md).
 
-Agente que conduz a fase de descoberta e estratégia de produto — problem statement, personas, jobs to be done, contexto de mercado, visão de produto, estratégia de produto e PRD — a partir de uma ideia informal ou transcrição de chat, seguindo o mesmo fluxo de engenharia de agentes do seu agente irmão, o [AQuA-QE Product Owner](https://github.com/dufelizardo/AQuA-QE-Product-Owner):
+Agente que conduz a fase de descoberta e estratégia de produto — problem statement, personas, jobs to be done, contexto de mercado, visão de produto, estratégia de produto e PRD — a partir de uma ideia informal ou transcrição de chat, seguindo o mesmo fluxo de engenharia de agentes do seu agente irmão, o [AQuA-QE Product Owner](https://github.com/dufelizardo/AQuA-QE-Product-Owner).
+
+**Qual problema resolve**: transforma uma ideia informal ou transcrição de chat numa PRD estruturada e validada — sem depender de reuniões de planejamento não estruturadas.
+**Quem usa**: product managers, fundadores ou líderes de time na fase inicial de descoberta, antes de existir uma PRD formal.
+**Qual o benefício**: síntese rápida com guardrails reais (nunca inventa dado de mercado/financeiro), com handoff direto para o Product Owner, sem retrabalho de formatação.
+**Como funciona (alto nível)**: Ideia/chat → descoberta → visão → estratégia → PRD, cada etapa validada (checklist), revisada (um segundo LLM independente) e aceita por um humano antes de avançar para a próxima.
+
+O diagrama abaixo descreve a *metodologia de engenharia de agentes* usada para construir este agente — não o seu pipeline de execução (ver "Como funciona" acima):
 
 ```
 PRD → System Design → Agent Design → AI Specs/Rules/Skills → Context Engineering → Memory/MCP → Agents → Outputs
